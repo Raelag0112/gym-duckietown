@@ -144,6 +144,13 @@ There is a simple UI application which allows you to control the simulation or r
 ```
 ./manual_control.py --env-name Duckietown-udem1-v0
 ```
+Some data can be extracted from a manually controlled session, by passing the --output argument. A filename can optionally be specified. Run the following command line and press S when the tour is done :
+
+```
+./manual_control.py --env-name Duckietown-udem1-v0 --output --filename test.csv
+```
+
+The data are extracted in the data/ folder.
 
 There is also a script to run automated tests (`run_tests.py`) and a script to gather performance metrics (`benchmark.py`).
 
