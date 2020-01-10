@@ -9,6 +9,8 @@ using the keyboard arrows.
 import sys
 import argparse
 import pyglet
+import os
+import csv
 from pyglet.window import key
 import numpy as np
 import gym
@@ -27,7 +29,13 @@ parser.add_argument('--draw-bbox', action='store_true', help='draw collision det
 parser.add_argument('--domain-rand', action='store_true', help='enable domain randomization')
 parser.add_argument('--frame-skip', default=1, type=int, help='number of frames to skip')
 parser.add_argument('--seed', default=1, type=int, help='seed')
+parser.add_argument('--output', action='store_true', help='store driving data in an output file')
+parser.add_argument('--filename', help='name of the output file (requires --output)')
 args = parser.parse_args()
+
+
+if args.filename and not args.output:
+    parser.error('The --filename argument requires the --output to be given')
 
 if args.env_name and args.env_name.find('Duckietown') != -1:
     env = DuckietownEnv(
@@ -44,6 +52,7 @@ else:
 
 env.reset()
 env.render()
+
 
 @env.unwrapped.window.event
 def on_key_press(symbol, modifiers):
@@ -73,7 +82,10 @@ def on_key_press(symbol, modifiers):
 key_handler = key.KeyStateHandler()
 env.unwrapped.window.push_handlers(key_handler)
 
-def update(dt):
+if args.output:
+    data = list()
+
+def update(dt, output):
     """
     This function is called at every frame to handle
     movement/stepping and redrawing
@@ -92,12 +104,19 @@ def update(dt):
     if key_handler[key.SPACE]:
         action = np.array([0, 0])
 
+    if key_handler[key.S]:
+        pyglet.app.exit()
+
     # Speed boost
     if key_handler[key.LSHIFT]:
         action *= 1.5
 
     obs, reward, done, info = env.step(action)
     print('step_count = %s, reward=%.3f' % (env.unwrapped.step_count, reward))
+
+    if output:
+        lp = env.get_lane_pos2(env.cur_pos, env.cur_angle)
+        data.append({'cur_pos': env.cur_pos, 'cur_angle': env.cur_angle, 'speed': env.speed, 'lane_pos': lp, 'action': action, 'reward': reward})
 
     if key_handler[key.RETURN]:
         from PIL import Image
@@ -112,9 +131,31 @@ def update(dt):
 
     env.render()
 
-pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate)
+pyglet.clock.schedule_interval(update, 1.0 / env.unwrapped.frame_rate, output=args.output)
 
 # Enter main event loop
 pyglet.app.run()
+
+def writeData(d, filename = None):
+    if not filename:
+        i = 0
+        while os.path.exists("./data/manual_control%s.csv" % i):
+            i += 1
+        filename = "manual_control%s.csv" % i
+
+    if not os.path.exists('./data'):
+        os.mkdir('./data')
+
+    filename = "data/" + filename
+
+    with open(filename, 'w', newline = '') as csvfile:
+        headers = d[0].keys()
+        csvwriter = csv.DictWriter(csvfile, fieldnames=headers)
+        csvwriter.writeheader()
+        for line in d:
+            csvwriter.writerow(line)
+
+if args.output:
+    writeData(data, filename=args.filename)
 
 env.close()
