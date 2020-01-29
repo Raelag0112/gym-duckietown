@@ -38,8 +38,7 @@ class ActorCNN(nn.Module):
     def __init__(self, action_dim, max_action):
         super(ActorCNN, self).__init__()
 
-        # ONLY TRU IN CASE OF DUCKIETOWN:
-        flat_size = 32 * 9 * 14
+        flat_size = 32 * 2 * 4
 
         self.lr = nn.LeakyReLU()
         self.tanh = nn.Tanh()
@@ -64,8 +63,8 @@ class ActorCNN(nn.Module):
 
     def forward(self, x):
         x = self.bn1(self.lr(self.conv1(x)))
-        x = self.bn2(self.lr(self.conv2(x)))
         x = self.bn3(self.lr(self.conv3(x)))
+        x = self.bn2(self.lr(self.conv2(x)))
         x = self.bn4(self.lr(self.conv4(x)))
         x = x.view(x.size(0), -1)  # flatten
         x = self.dropout(x)
@@ -104,7 +103,7 @@ class CriticCNN(nn.Module):
     def __init__(self, action_dim):
         super(CriticCNN, self).__init__()
 
-        flat_size = 32 * 9 * 14
+        flat_size = 32 * 2 * 4
 
         self.lr = nn.LeakyReLU()
 
@@ -153,7 +152,7 @@ class DDPG(object):
             self.flat = False
             self.actor = ActorCNN(action_dim, max_action).to(device)
             self.actor_target = ActorCNN(action_dim, max_action).to(device)
-        
+
         print("Initialized Actor")
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
@@ -228,7 +227,7 @@ class DDPG(object):
         print("Saved Actor")
         torch.save(self.critic.state_dict(), '{}/{}_critic.pth'.format(directory, filename))
         print("Saved Critic")
-        
+
     def load(self, filename, directory):
         self.actor.load_state_dict(torch.load('{}/{}_actor.pth'.format(directory, filename), map_location=device))
         self.critic.load_state_dict(torch.load('{}/{}_critic.pth'.format(directory, filename), map_location=device))
