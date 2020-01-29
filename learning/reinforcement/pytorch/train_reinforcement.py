@@ -62,7 +62,7 @@ def _train(args):
     print("Starting training")
     while total_timesteps < args.max_timesteps:
 
-        print("timestep: {} | reward: {}".format(total_timesteps, reward))
+        #print("timestep: {} | reward: {}".format(total_timesteps, reward))
 
         if done:
             if total_timesteps != 0:
