@@ -12,15 +12,16 @@ from utils.wrappers import NormalizeWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
 
 
-def _enjoy():          
+def _enjoy():
     # Launch the env with our helper function
     env = launch_env()
     print("Initialized environment")
 
     # Wrappers
     env = ResizeWrapper(env)
+    env = GrayscaleWrapper(env)
     env = NormalizeWrapper(env)
-    env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
+    env = FrameStack(env, 3)
     env = ActionWrapper(env)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
@@ -43,7 +44,7 @@ def _enjoy():
             obs, reward, done, _ = env.step(action)
             env.render()
         done = False
-        obs = env.reset()        
+        obs = env.reset()
 
 if __name__ == '__main__':
     _enjoy()

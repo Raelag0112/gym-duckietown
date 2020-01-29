@@ -4,7 +4,7 @@ import numpy as np
 
 
 class ResizeWrapper(gym.ObservationWrapper):
-    def __init__(self, env=None, shape=(120, 160, 3)):
+    def __init__(self, env=None, shape=(80, 60, 3)):
         super(ResizeWrapper, self).__init__(env)
         self.observation_space.shape = shape
         self.observation_space = spaces.Box(
@@ -18,12 +18,24 @@ class ResizeWrapper(gym.ObservationWrapper):
         from PIL import Image
         return np.array(Image.fromarray(observation).resize(self.shape[0:2]))
 
+class GrayscaleWrapper(gym.ObservationWrapper):
+    def __init__(self, env=None):
+        super(GrayscaleWrapper, self).__init__(env)
+        self.observation_space = spaces.Box(
+            self.observation_space.low[0, 0, 0],
+            self.observation_space.high[0, 0, 0],
+            self.observation_space.shape[:-1],
+            dtype=self.observation_space.dtype)
+
+    def observation(self, observation):
+        from PIL import Image
+        return np.array(Image.fromarray(observation).convert('L'))
 
 class NormalizeWrapper(gym.ObservationWrapper):
     def __init__(self, env=None):
         super(NormalizeWrapper, self).__init__(env)
-        self.obs_lo = self.observation_space.low[0, 0, 0]
-        self.obs_hi = self.observation_space.high[0, 0, 0]
+        self.obs_lo = self.observation_space.low[0, 0]
+        self.obs_hi = self.observation_space.high[0, 0]
         obs_shape = self.observation_space.shape
         self.observation_space = spaces.Box(0.0, 1.0, obs_shape, dtype=np.float32)
 
@@ -32,7 +44,6 @@ class NormalizeWrapper(gym.ObservationWrapper):
             return obs
         else:
             return (obs - self.obs_lo) / (self.obs_hi - self.obs_lo)
-
 
 class ImgWrapper(gym.ObservationWrapper):
     def __init__(self, env=None):
