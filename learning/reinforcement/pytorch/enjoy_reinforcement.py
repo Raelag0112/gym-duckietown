@@ -8,9 +8,9 @@ import numpy as np
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
 from utils.env import launch_env
-from utils.wrappers import NormalizeWrapper, ImgWrapper, \
+from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
-
+from gym.wrappers import FrameStack
 
 def _enjoy():
     # Launch the env with our helper function
