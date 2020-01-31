@@ -75,7 +75,7 @@ class DtRewardWrapper(gym.RewardWrapper):
         lp = self.env.get_lane_pos2(self.env.cur_pos, self.env.cur_angle)
 
 
-        return speed * lp.dot_dir
+        return lp.angle_rad
 
 
 # Deprecated
