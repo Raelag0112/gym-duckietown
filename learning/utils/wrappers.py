@@ -86,7 +86,16 @@ class DtRewardWrapper(gym.RewardWrapper):
 class ActionWrapper(gym.ActionWrapper):
     def __init__(self, env):
         super(ActionWrapper, self).__init__(env)
+        self.prev_action = []
 
     def action(self, action):
-        action_ = [action[0], action[1] * 0.6]
-        return action_
+        max_delta_steering = 0.1
+        if self.prev_action != []:
+            # limit
+            prev_steering = self.prev_action[1]
+            steering = np.clip(action[1], prev_steering - max_delta_steering, prev_steering + max_delta_steering)
+
+            action = [action[0], steering]
+
+        self.prev_action = action
+        return action
