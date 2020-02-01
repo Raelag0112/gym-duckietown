@@ -76,9 +76,10 @@ class DtRewardWrapper(gym.RewardWrapper):
 
         reward_angle = np.clip(1 - lp.angle_rad**2, -1, 1)
         reward_dist = np.clip(1 - lp.dist**2, -1, 1)
+        reward_speed = self.env.speed
 
 
-        return (reward_angle + reward_dist) / 2
+        return (reward_angle + reward_dist + reward_speed) / 3
 
 
 # Deprecated
