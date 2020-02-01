@@ -72,7 +72,10 @@ class DtRewardWrapper(gym.RewardWrapper):
             reward += 4
 
         speed = self.env.speed
-        lp = self.env.get_lane_pos2(self.env.cur_pos, self.env.cur_angle)
+        try :
+            lp = self.env.get_lane_pos2(self.env.cur_pos, self.env.cur_angle)
+        except NotInLane:
+            return -1
 
         reward_angle = np.clip(1 - lp.angle_rad**2, -1, 1)
         reward_dist = np.clip(1 - lp.dist**2, -1, 1)
