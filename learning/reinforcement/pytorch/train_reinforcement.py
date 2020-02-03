@@ -45,7 +45,7 @@ def _train(args):
     # Initialize policy
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
     if args.load_initial_policy:
-        policy.load(filename='ddpg', directory='reinforcement/pytorch/models/')
+        policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
         args.start_timesteps=0
 
 
@@ -80,7 +80,7 @@ def _train(args):
                     timesteps_since_eval %= args.eval_freq
                     evaluations.append(evaluate_policy(env, policy))
                     print("rewards at time {}: {}".format(total_timesteps, evaluations[-1]))
-                    policy.save(filename='ddpg', directory=args.model_dir)
+                    policy.save(filename=args.policy, directory=args.model_dir)
                     np.savez("./results/rewards.npz",evaluations)
 
             # Reset environment
@@ -122,7 +122,7 @@ def _train(args):
         timesteps_since_eval += 1
 
     print("Training done, about to save..")
-    policy.save(filename='ddpg', directory=args.model_dir)
+    policy.save(filename=args.policy, directory=args.model_dir)
     print("Finished saving..should return now!")
 
 if __name__ == '__main__':
@@ -145,5 +145,6 @@ if __name__ == '__main__':
     parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
     parser.add_argument('--model-dir', type=str, default='reinforcement/pytorch/models/')
     parser.add_argument('--load_initial_policy', help='Start the training on a loaded polisy', action = 'store_true')
+    parser.add_argument('--policy', default='ddpg', help='Name of the initial policy')
 
     _train(parser.parse_args())
