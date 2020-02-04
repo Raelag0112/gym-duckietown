@@ -176,9 +176,6 @@ class TD3(object):
 
     def predict(self, state):
 
-        # just making sure the state has the correct format, otherwise the prediction doesn't work
-        assert state.shape[0] == 3
-
         if self.flat:
             state = torch.FloatTensor(state.reshape(1, -1)).to(device)
         else:
