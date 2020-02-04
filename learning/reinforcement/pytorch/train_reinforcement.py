@@ -7,6 +7,7 @@ import numpy as np
 
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
+from reinforcement.pytorch.td3 import TD3
 from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer
 from utils.env import launch_env
 from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
@@ -30,7 +31,7 @@ def _train(args):
     env = ResizeWrapper(env)
     env = GrayscaleWrapper(env)
     env = NormalizeWrapper(env)
-    env = FrameStack(env, 3)
+    env = FrameStack(env, 4)
     env = ActionWrapper(env)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
@@ -43,14 +44,20 @@ def _train(args):
     max_action = float(env.action_space.high[0])
 
     # Initialize policy
-    policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
+    if args.policy = 'ddpg':
+        policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
+        print("Initialized DDPG")
+    if args.policy = 'td3':
+        policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
+        print("Initialized TD3")
+        
     if args.load_initial_policy:
         policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
         args.start_timesteps=0
 
 
     replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
-    print("Initialized DDPG")
+    
 
     # Evaluate untrained policy
     evaluations= [evaluate_policy(env, policy)]
