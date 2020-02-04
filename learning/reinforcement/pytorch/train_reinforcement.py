@@ -63,6 +63,12 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
+    
+    # Keep track of the best reward over time
+    best_reward = -np.inf
+    
+    # Keep track of train_rewards
+    train_rewards = []
 
     print("Starting training")
     while total_timesteps < args.max_timesteps:
@@ -74,14 +80,22 @@ def _train(args):
                 print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
                     total_timesteps, episode_num, episode_timesteps, episode_reward))
                 policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
-
+                
+                train_rewards.append(episode_reward)
+                
                 # Evaluate episode
                 if timesteps_since_eval >= args.eval_freq:
                     timesteps_since_eval %= args.eval_freq
-                    evaluations.append(evaluate_policy(env, policy))
-                    print("rewards at time {}: {}".format(total_timesteps, evaluations[-1]))
-                    policy.save(filename=args.policy, directory=args.model_dir)
-                    np.savez("./results/rewards.npz",evaluations)
+                    eval_reward = evaluate_policy(env, policy)
+                    evaluations.append(eval_reward)
+                    print("rewards at time {}: {}".format(total_timesteps, eval_reward))
+                    np.savetxt("/results/eval_rewards.csv", np.array(evaluations), delimiter=",")
+                    np.savetxt("/results/train_rewards.csv", np.array(train_rewards), delimiter=",")
+                    
+                    # Save the policy according to the best reward over training
+                    if eval_reward > best_reward:
+                        best_reward = eval_reward
+                        policy.save(filename=args.policy, directory=args.model_dir)
 
             # Reset environment
             env_counter += 1
@@ -90,6 +104,8 @@ def _train(args):
             episode_reward = 0
             episode_timesteps = 0
             episode_num += 1
+
+
 
         # Select action randomly or according to policy
         if total_timesteps < args.start_timesteps:
