@@ -44,10 +44,10 @@ def _train(args):
     max_action = float(env.action_space.high[0])
 
     # Initialize policy
-    if args.policy = 'ddpg':
+    if args.policy == 'ddpg':
         policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized DDPG")
-    if args.policy = 'td3':
+    if args.policy == 'td3':
         policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized TD3")
         
