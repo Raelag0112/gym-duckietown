@@ -89,8 +89,8 @@ def _train(args):
                     eval_reward = evaluate_policy(env, policy)
                     evaluations.append(eval_reward)
                     print("rewards at time {}: {}".format(total_timesteps, eval_reward))
-                    np.savetxt("/results/eval_rewards.csv", np.array(evaluations), delimiter=",")
-                    np.savetxt("/results/train_rewards.csv", np.array(train_rewards), delimiter=",")
+                    np.savetxt("results/eval_rewards.csv", np.array(evaluations), delimiter=",")
+                    np.savetxt("results/train_rewards.csv", np.array(train_rewards), delimiter=",")
                     
                     # Save the policy according to the best reward over training
                     if eval_reward > best_reward:
