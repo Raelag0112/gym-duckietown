@@ -56,6 +56,12 @@ def _train(args):
     reward = 0
     episode_timesteps = 0
     
+    ### Added PER hyperparams
+    prioritized_replay_alpha=0.6
+    prioritized_replay_beta0=0.4
+    prioritized_replay_beta_iters=None
+    prioritized_replay_eps=1e-6
+    
     # Keep track of the best reward over time
     best_reward = -np.inf
     
