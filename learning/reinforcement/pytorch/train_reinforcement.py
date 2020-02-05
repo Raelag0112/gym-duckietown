@@ -36,7 +36,6 @@ def _train(args):
     env = GrayscaleWrapper(env)
     env = NormalizeWrapper(env)
     env = FrameStack(env, 4)
-    env = ActionWrapper(env)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
 
@@ -46,7 +45,7 @@ def _train(args):
     state_dim = env.observation_space.shape
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
-    
+
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
@@ -55,13 +54,13 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
-    
+
     ### Added PER hyperparams
     prioritized_replay_alpha=0.6
-    
+
     # Keep track of the best reward over time
     best_reward = -np.inf
-    
+
     # Keep track of train_rewards
     train_rewards = []
 
@@ -72,18 +71,18 @@ def _train(args):
     if args.policy == 'td3':
         policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized TD3")
-    
+
     ### Added per_ddpg
     if args.policy == 'ddpg_per':
         policy = DDPG_PER(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized DDPG with PER")
-        
+
     # Evaluate untrained policy
     evaluations= [evaluate_policy(env, policy)]
-    
+
     # Load previous policy
     if args.load_initial_policy:
-    
+
         # Reset environment
         env_counter += 1
         obs = env.reset()
@@ -91,24 +90,24 @@ def _train(args):
         episode_reward = 0
         episode_timesteps = 0
         episode_num += 1
-    
+
         args.start_timesteps=0
-        
+
         checkpoint = torch.load('reinforcement/pytorch/models/' + args.policy)
-        
+
         policy.actor.load_state_dict(checkpoint['actor_state_dict'])
         evaluations = checkpoint['evaluations']
         total_timesteps = checkpoint['total_timesteps']
         train_rewards = checkpoint['train_rewards']
         episode_num = checkpoint['episode_num']
-        
+
         if str(args.policy).lower() == 'ddpg':
             policy.critic.load_state_dict(checkpoint['critic_state_dict'])
         if str(args.policy).lower() == 'td3':
             policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
             policy.critic_2.load_state_dict(checkpoint['critic_1_state_dict'])
-        
-        
+
+
     ## Initialize ReplayBuffer
     if args.per:
         print('Training with Prioritized Experience Reply')
@@ -125,14 +124,14 @@ def _train(args):
             if total_timesteps != 0:
                 print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
                     total_timesteps, episode_num, episode_timesteps, episode_reward))
-                    
+
                 if args.per:
                     policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
                 else:
                     policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
-                
+
                 train_rewards.append(episode_reward)
-                
+
                 # Evaluate episode
                 if timesteps_since_eval >= args.eval_freq:
                     timesteps_since_eval %= args.eval_freq
@@ -143,11 +142,11 @@ def _train(args):
                     np.savetxt("reinforcement/pytorch/results/eval_rewards.csv", np.array(evaluations), delimiter=",")
                     np.savetxt("reinforcement/pytorch/results/train_rewards.csv", np.array(train_rewards), delimiter=",")
 
-                    
+
                     # Save the policy according to the best reward over training
                     if eval_reward > best_reward:
                         best_reward = eval_reward
-                        
+
                         save_dict = {
                         'total_timesteps': total_timesteps,
                         'evaluations': evaluations,
@@ -155,18 +154,18 @@ def _train(args):
                         'episode_num': episode_num,
                         'actor_state_dict': policy.actor.state_dict()
                         }
-                        
+
                         if str(args.policy).lower() == 'ddpg':
                             save_dict['critic_state_dict'] = policy.critic.state_dict()
                         if str(args.policy).lower() == 'td3':
                             save_dict['critic_1_state_dict'] = policy.critic_1.state_dict()
                             save_dict['critic_2_state_dict'] = policy.critic_2.state_dict()
-                        
+
                         ### ADD ELSE ERROR
-                        
+
                         print('Model saved\n')
                         torch.save(save_dict, args.model_dir + args.policy)
-                        
+
 
             # Reset environment
             env_counter += 1

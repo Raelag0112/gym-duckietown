@@ -5,8 +5,11 @@ import logging
 import os
 import numpy as np
 
+import torch
+
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
+from reinforcement.pytorch.td3 import TD3
 from utils.env import launch_env
 from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
@@ -21,8 +24,7 @@ def _enjoy(args):
     env = ResizeWrapper(env)
     env = GrayscaleWrapper(env)
     env = NormalizeWrapper(env)
-    env = FrameStack(env, 3)
-    env = ActionWrapper(env)
+    env = FrameStack(env, 4)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
 
@@ -31,8 +33,20 @@ def _enjoy(args):
     max_action = float(env.action_space.high[0])
 
     # Initialize policy
-    policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
-    policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
+    policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
+#    policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
+
+
+    checkpoint = torch.load('reinforcement/pytorch/models/td3', map_location='cpu')
+
+    policy.actor.load_state_dict(checkpoint['actor_state_dict'])
+    evaluations = checkpoint['evaluations']
+    total_timesteps = checkpoint['total_timesteps']
+    train_rewards = checkpoint['train_rewards']
+    episode_num = checkpoint['episode_num']
+
+    policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
+    policy.critic_2.load_state_dict(checkpoint['critic_1_state_dict'])
 
     obs = env.reset()
     done = False
