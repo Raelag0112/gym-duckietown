@@ -42,26 +42,7 @@ def _train(args):
     state_dim = env.observation_space.shape
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
-
-    # Initialize policy
-    if args.policy == 'ddpg':
-        policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
-        print("Initialized DDPG")
-    if args.policy == 'td3':
-        policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
-        print("Initialized TD3")
-        
-    if args.load_initial_policy:
-        policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
-        args.start_timesteps=0
-
-
-    replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
     
-
-    # Evaluate untrained policy
-    evaluations= [evaluate_policy(env, policy)]
-
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
@@ -76,6 +57,39 @@ def _train(args):
     
     # Keep track of train_rewards
     train_rewards = []
+    
+    # Evaluate untrained policy
+    evaluations= [evaluate_policy(env, policy)]
+
+    # Initialize policy
+    if args.policy == 'ddpg':
+        policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
+        print("Initialized DDPG")
+    if args.policy == 'td3':
+        policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
+        print("Initialized TD3")
+        
+    if args.load_initial_policy:
+    
+        args.start_timesteps=0
+        
+        checkpoint = torch.load('reinforcement/pytorch/models/' + args.policy)
+        
+        policy.actor.load_state_dict(checkpoint['actor_state_dict'])
+        evaluations = checkpoint['evaluations']
+        total_timesteps = checkpoint['total_timesteps']
+        train_rewards = checkpoint['train_rewards']
+        
+        if str(args.policy).lower() == 'ddpg':
+            policy.critic.load_state_dict(checkpoint['critic_state_dict'])
+        if str(args.policy).lower() == 'td3':
+            policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
+            policy.critic_2.load_state_dict(checkpoint['critic_1_state_dict'])
+        
+        
+    ## Initialize ReplayBuffer
+
+    replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
 
     print("Starting training")
     while total_timesteps < args.max_timesteps:
@@ -104,7 +118,24 @@ def _train(args):
                     # Save the policy according to the best reward over training
                     if eval_reward > best_reward:
                         best_reward = eval_reward
-                        policy.save(filename=args.policy, directory=args.model_dir)
+                        
+                        save_dict = {
+                        'total_timesteps': total_timesteps,
+                        'evaluations': evaluations,
+                        'train_rewards': train_rewards,
+                        'actor_state_dict': policy.actor.state_dict()
+                        }
+                        
+                        if str(args.policy).lower() == 'ddpg':
+                            save_dict{'critic_state_dict': policy.critic.state_dict()}
+                        if str(args.policy).lower() == 'td3':
+                            save_dict{'critic_1_state_dict': policy.critic_1.state_dict()}
+                            save_dict{'critic_2_state_dict': policy.critic_2.state_dict()}
+                        
+                        ### ADD ELSE ERROR
+                        
+                        torch.save(save_dict, args.model_dir + args.policy)
+                        
 
             # Reset environment
             env_counter += 1
@@ -146,9 +177,7 @@ def _train(args):
         total_timesteps += 1
         timesteps_since_eval += 1
 
-    print("Training done, about to save..")
-    policy.save(filename=args.policy, directory=args.model_dir)
-    print("Finished saving..should return now!")
+    print("Finished..should return now!")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -170,6 +199,6 @@ if __name__ == '__main__':
     parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
     parser.add_argument('--model-dir', type=str, default='reinforcement/pytorch/models/')
     parser.add_argument('--load_initial_policy', help='Start the training on a loaded polisy', action = 'store_true')
-    parser.add_argument('--policy', default='ddpg', help='Name of the initial policy')
+    parser.add_argument('--policy', type=str, default='ddpg', help='Name of the initial policy')
 
     _train(parser.parse_args())
