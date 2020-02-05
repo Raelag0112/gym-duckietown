@@ -58,8 +58,7 @@ def _train(args):
     # Keep track of train_rewards
     train_rewards = []
     
-    # Evaluate untrained policy
-    evaluations= [evaluate_policy(env, policy)]
+    
 
     # Initialize policy
     if args.policy == 'ddpg':
@@ -69,6 +68,10 @@ def _train(args):
         policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized TD3")
         
+    # Evaluate untrained policy
+    evaluations= [evaluate_policy(env, policy)]
+    
+    # Load previous policy
     if args.load_initial_policy:
     
         args.start_timesteps=0
