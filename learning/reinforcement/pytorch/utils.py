@@ -90,7 +90,6 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         --------
         ReplayBuffer.__init__
         """
-        super(PrioritizedReplayBuffer, self).__init__(size)
         assert alpha >= 0
         self._alpha = alpha
 
