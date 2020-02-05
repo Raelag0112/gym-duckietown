@@ -47,7 +47,7 @@ def _train(args):
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
-    done = True
+    done = False
     episode_reward = None
     env_counter = 0
     reward = 0
@@ -58,8 +58,6 @@ def _train(args):
     
     # Keep track of train_rewards
     train_rewards = []
-    
-    
 
     # Initialize policy
     if args.policy == 'ddpg':
@@ -114,7 +112,7 @@ def _train(args):
                     timesteps_since_eval %= args.eval_freq
                     eval_reward = evaluate_policy(env, policy)
                     evaluations.append(eval_reward)
-                    print("rewards at time {}: {}".format(total_timesteps, eval_reward))
+                    print("\n--- rewards at time {}: {} ---".format(total_timesteps, eval_reward))
 
                     np.savetxt("reinforcement/pytorch/results/eval_rewards.csv", np.array(evaluations), delimiter=",")
                     np.savetxt("reinforcement/pytorch/results/train_rewards.csv", np.array(train_rewards), delimiter=",")
@@ -140,6 +138,7 @@ def _train(args):
                         
                         ### ADD ELSE ERROR
                         
+                        print('Model saved\n')
                         torch.save(save_dict, args.model_dir + args.policy)
                         
 
