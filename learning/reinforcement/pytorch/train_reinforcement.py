@@ -127,10 +127,10 @@ def _train(args):
                         }
                         
                         if str(args.policy).lower() == 'ddpg':
-                            save_dict{'critic_state_dict': policy.critic.state_dict()}
+                            save_dict['critic_state_dict': policy.critic.state_dict()]
                         if str(args.policy).lower() == 'td3':
-                            save_dict{'critic_1_state_dict': policy.critic_1.state_dict()}
-                            save_dict{'critic_2_state_dict': policy.critic_2.state_dict()}
+                            save_dict['critic_1_state_dict': policy.critic_1.state_dict()]
+                            save_dict['critic_2_state_dict': policy.critic_2.state_dict()]
                         
                         ### ADD ELSE ERROR
                         
