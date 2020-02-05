@@ -215,7 +215,6 @@ class DDPG_PER(object):
             
             ### Get new priorities
             new_priorities = np.abs(td_errors.cpu().detach().numpy())[0] + prioritized_replay_eps
-            print(new_priorities)
             replay_buffer.update_priorities(batch_idxes, new_priorities)
 
             ### Compute weighted critic loss
