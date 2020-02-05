@@ -98,6 +98,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         it_capacity = 1
         while it_capacity < size:
             it_capacity *= 2
+            
+        ### Added attributes
+        self._storage = []
+        self._maxsize = size
+        self._next_idx = 0
 
         self._it_sum = SumSegmentTree(it_capacity)
         self._it_min = MinSegmentTree(it_capacity)
