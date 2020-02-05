@@ -6,6 +6,9 @@ import torch
 import os
 import numpy as np
 
+### Added test import
+from reinforcement.pytorch.ddpg_per import DDPG_PER
+
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
 from reinforcement.pytorch.td3 import TD3
@@ -66,6 +69,11 @@ def _train(args):
     if args.policy == 'td3':
         policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
         print("Initialized TD3")
+    
+    ### Added per_ddpg
+    if args.policy == 'ddpg_per':
+        policy = DDPG_PER(state_dim, action_dim, max_action, net_type="cnn")
+        print("Initialized DDPG with PER")
         
     # Evaluate untrained policy
     evaluations= [evaluate_policy(env, policy)]
@@ -99,8 +107,16 @@ def _train(args):
         
         
     ## Initialize ReplayBuffer
-
-    replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
+    if args.per:
+        print('Training with Prioritized Experience Reply')
+        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, alpha = prioritized_replay_alpha)
+        if prioritized_replay_beta_iters is None:
+            prioritized_replay_beta_iters = total_timesteps
+        beta_schedule = LinearSchedule(prioritized_replay_beta_iters,
+                                       initial_p=prioritized_replay_beta0,
+                                       final_p=1.0)
+    else:
+        replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
 
     print("Starting training")
     while total_timesteps < args.max_timesteps:
@@ -213,5 +229,6 @@ if __name__ == '__main__':
     parser.add_argument('--model-dir', type=str, default='reinforcement/pytorch/models/')
     parser.add_argument('--load_initial_policy', help='Start the training on a loaded polisy', action = 'store_true')
     parser.add_argument('--policy', type=str, default='ddpg', help='Name of the initial policy')
+    parser.add_argument('--per', help='Train with Prioritized Experience Replay', action = 'store_true')
 
     _train(parser.parse_args())
