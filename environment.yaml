@@ -16,3 +16,4 @@ dependencies:
         - scikit-image
         - dataclasses
         - pygeometry
+        - baselines
