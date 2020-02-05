@@ -60,9 +60,6 @@ def _train(args):
     
     ### Added PER hyperparams
     prioritized_replay_alpha=0.6
-    prioritized_replay_beta0=0.4
-    prioritized_replay_beta_iters=None
-    prioritized_replay_eps=1e-6
     
     # Keep track of the best reward over time
     best_reward = -np.inf
@@ -118,11 +115,6 @@ def _train(args):
     if args.per:
         print('Training with Prioritized Experience Reply')
         replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, alpha = prioritized_replay_alpha)
-        if prioritized_replay_beta_iters is None:
-            prioritized_replay_beta_iters = total_timesteps
-        beta_schedule = LinearSchedule(prioritized_replay_beta_iters,
-                                       initial_p=prioritized_replay_beta0,
-                                       final_p=1.0)
     else:
         replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
 
