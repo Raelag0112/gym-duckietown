@@ -6,7 +6,6 @@ import torch
 
 from baselines.common.segment_tree import SumSegmentTree, MinSegmentTree
 
-
 def seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -108,10 +107,16 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self._it_min = MinSegmentTree(it_capacity)
         self._max_priority = 1.0
 
-    def add(self, *args, **kwargs):
+    def add(self, obs_t, obs_tp1, action, reward, done):
         """See ReplayBuffer.store_effect"""
         idx = self._next_idx
-        super().add(*args, **kwargs)
+        data = (obs_t, action, reward, obs_tp1, done)
+
+        if self._next_idx >= len(self._storage):
+            self._storage.append(data)
+        else:
+            self._storage[self._next_idx] = data
+        self._next_idx = (self._next_idx + 1) % self._maxsize
         self._it_sum[idx] = self._max_priority ** self._alpha
         self._it_min[idx] = self._max_priority ** self._alpha
         
