@@ -177,7 +177,7 @@ class DDPG_PER(object):
             state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, total_timesteps):
+    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, total_timesteps=0):
     
         ### Added PER hyperparams
         prioritized_replay_beta0=0.4
