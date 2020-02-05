@@ -12,7 +12,7 @@ from reinforcement.pytorch.ddpg_per import DDPG_PER
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
 from reinforcement.pytorch.td3 import TD3
-from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer
+from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer, PrioritizedReplayBuffer
 from utils.env import launch_env
 from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
