@@ -9,8 +9,8 @@ import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# Implementation of Deep Deterministic Policy Gradients (DDPG)
-# Paper: https://arxiv.org/abs/1509.02971
+# Implementation of  Twin Delayed Deep Deterministic Policy Gradients (TD3)
+# Paper: https://arxiv.org/pdf/1802.09477.pdf
 
 
 class ActorDense(nn.Module):
@@ -136,10 +136,10 @@ class CriticCNN(nn.Module):
         return x
 
 
-class DDPG(object):
+class TD3(object):
     def __init__(self, state_dim, action_dim, max_action, net_type):
-        super(DDPG, self).__init__()
-        print("Starting DDPG init")
+        super(TD3, self).__init__()
+        print("Starting TD3 init")
         assert net_type in ["cnn", "dense"]
 
         self.state_dim = state_dim
@@ -158,20 +158,23 @@ class DDPG(object):
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=1e-4)
         print("Initialized Target+Opt [Actor]")
         if net_type == "dense":
-            self.critic = CriticDense(state_dim, action_dim).to(device)
-            self.critic_target = CriticDense(state_dim, action_dim).to(device)
+            self.critic_1 = CriticDense(state_dim, action_dim).to(device)
+            self.critic_target_1 = CriticDense(state_dim, action_dim).to(device)
+            self.critic_2 = CriticDense(state_dim, action_dim).to(device)
+            self.critic_target_2 = CriticDense(state_dim, action_dim).to(device)
         else:
-            self.critic = CriticCNN(action_dim).to(device)
-            self.critic_target = CriticCNN(action_dim).to(device)
-        print("Initialized Critic")
-        self.critic_target.load_state_dict(self.critic.state_dict())
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters())
-        print("Initialized Target+Opt [Critic]")
+            self.critic_1 = CriticCNN(action_dim).to(device)
+            self.critic_target_1 = CriticCNN(action_dim).to(device)
+            self.critic_2 = CriticCNN(action_dim).to(device)
+            self.critic_target_2 = CriticCNN(action_dim).to(device)
+        print("Initialized Critics 1 & 2")
+        self.critic_target_1.load_state_dict(self.critic_1.state_dict())
+        self.critic_target_2.load_state_dict(self.critic_2.state_dict())
+        self.critic_1_optimizer = torch.optim.Adam(self.critic_1.parameters())
+        self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters())
+        print("Initialized Target+Opt [Critics]")
 
     def predict(self, state):
-
-        # just making sure the state has the correct format, otherwise the prediction doesn't work
-        assert state.shape[0] == 3
 
         if self.flat:
             state = torch.FloatTensor(state.reshape(1, -1)).to(device)
@@ -192,42 +195,61 @@ class DDPG(object):
             reward = torch.FloatTensor(sample["reward"]).to(device)
 
             # Compute the target Q value
-            target_Q = self.critic_target(next_state, self.actor_target(next_state))
-            target_Q = reward + (done * discount * target_Q).detach()
+            target_1_Q = self.critic_target_1(next_state, self.actor_target(next_state))
+            
+            target_2_Q = self.critic_target_2(next_state, self.actor_target(next_state))
+            
+            target_Q = reward + (done * discount * torch.min(target_1_Q,target_2_Q)).detach()
 
             # Get current Q estimate
-            current_Q = self.critic(state, action)
+            current_Q_1 = self.critic_1(state, action)
+            
+            current_Q_2 = self.critic_2(state, action)
 
-            # Compute critic loss
-            critic_loss = F.mse_loss(current_Q, target_Q)
+            # Compute critics loss
+            critic_1_loss = F.mse_loss(current_Q_1, target_Q)
+            
+            critic_2_loss = F.mse_loss(current_Q_2, target_Q)
 
-            # Optimize the critic
-            self.critic_optimizer.zero_grad()
-            critic_loss.backward()
-            self.critic_optimizer.step()
+            # Optimize the critics
+            self.critic_1_optimizer.zero_grad()
+            critic_1_loss.backward()
+            self.critic_1_optimizer.step()
+            
+            self.critic_2_optimizer.zero_grad()
+            critic_2_loss.backward()
+            self.critic_2_optimizer.step()
+            
+            if it % 2 == 0:
 
-            # Compute actor loss
-            actor_loss = -self.critic(state, self.actor(state)).mean()
+                # Compute actor loss
+                actor_loss = -self.critic_1(state, self.actor(state)).mean()
 
-            # Optimize the actor
-            self.actor_optimizer.zero_grad()
-            actor_loss.backward()
-            self.actor_optimizer.step()
+                # Optimize the actor
+                self.actor_optimizer.zero_grad()
+                actor_loss.backward()
+                self.actor_optimizer.step()
 
-            # Update the frozen target models
-            for param, target_param in zip(self.critic.parameters(), self.critic_target.parameters()):
-                target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+                # Update the frozen target models
+                for param, target_param in zip(self.critic_1.parameters(), self.critic_target_1.parameters()):
+                    target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+                    
+                for param, target_param in zip(self.critic_2.parameters(), self.critic_target_2.parameters()):
+                    target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
-            for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
+                for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
+                    target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
     def save(self, filename, directory):
         print("Saving to {}/{}_[actor|critic].pth".format(directory, filename))
         torch.save(self.actor.state_dict(), '{}/{}_actor.pth'.format(directory, filename))
         print("Saved Actor")
-        torch.save(self.critic.state_dict(), '{}/{}_critic.pth'.format(directory, filename))
-        print("Saved Critic")
+        torch.save(self.critic_1.state_dict(), '{}/{}_critic_1.pth'.format(directory, filename))
+        print("Saved Critic_1")
+        torch.save(self.critic_2.state_dict(), '{}/{}_critic_2.pth'.format(directory, filename))
+        print("Saved Critic_2")
 
     def load(self, filename, directory):
         self.actor.load_state_dict(torch.load('{}/{}_actor.pth'.format(directory, filename), map_location=device))
-        self.critic.load_state_dict(torch.load('{}/{}_critic.pth'.format(directory, filename), map_location=device))
+        self.critic_1.load_state_dict(torch.load('{}/{}_critic_1.pth'.format(directory, filename), map_location=device))
+        self.critic_2.load_state_dict(torch.load('{}/{}_critic_2.pth'.format(directory, filename), map_location=device))

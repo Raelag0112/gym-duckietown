@@ -8,19 +8,20 @@ import numpy as np
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
 from utils.env import launch_env
-from utils.wrappers import NormalizeWrapper, ImgWrapper, \
+from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
+from gym.wrappers import FrameStack
 
-
-def _enjoy():          
+def _enjoy(args):
     # Launch the env with our helper function
     env = launch_env()
     print("Initialized environment")
 
     # Wrappers
     env = ResizeWrapper(env)
+    env = GrayscaleWrapper(env)
     env = NormalizeWrapper(env)
-    env = ImgWrapper(env) # to make the images from 160x120x3 into 3x160x120
+    env = FrameStack(env, 3)
     env = ActionWrapper(env)
     env = DtRewardWrapper(env)
     print("Initialized Wrappers")
@@ -31,7 +32,7 @@ def _enjoy():
 
     # Initialize policy
     policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
-    policy.load(filename='ddpg', directory='reinforcement/pytorch/models/')
+    policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
 
     obs = env.reset()
     done = False
@@ -43,7 +44,9 @@ def _enjoy():
             obs, reward, done, _ = env.step(action)
             env.render()
         done = False
-        obs = env.reset()        
+        obs = env.reset()
 
 if __name__ == '__main__':
-    _enjoy()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--policy', default='ddpg', help='Name of the initial policy')
+    _enjoy(parser.parse_args())
