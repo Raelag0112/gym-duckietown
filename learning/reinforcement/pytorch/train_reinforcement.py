@@ -82,6 +82,7 @@ def _train(args):
         evaluations = checkpoint['evaluations']
         total_timesteps = checkpoint['total_timesteps']
         train_rewards = checkpoint['train_rewards']
+        episode_num = checkpoint['episode_num']
         
         if str(args.policy).lower() == 'ddpg':
             policy.critic.load_state_dict(checkpoint['critic_state_dict'])
@@ -126,6 +127,7 @@ def _train(args):
                         'total_timesteps': total_timesteps,
                         'evaluations': evaluations,
                         'train_rewards': train_rewards,
+                        'episode_num': episode_num,
                         'actor_state_dict': policy.actor.state_dict()
                         }
                         
