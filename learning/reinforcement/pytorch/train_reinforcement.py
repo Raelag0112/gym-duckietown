@@ -18,8 +18,6 @@ from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
 from gym.wrappers import FrameStack
 
-from baselines.common.schedules import LinearSchedule
-
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
