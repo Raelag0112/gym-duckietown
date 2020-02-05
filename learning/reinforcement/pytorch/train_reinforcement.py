@@ -47,7 +47,7 @@ def _train(args):
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
-    done = False
+    done = True
     episode_reward = None
     env_counter = 0
     reward = 0
@@ -72,6 +72,14 @@ def _train(args):
     
     # Load previous policy
     if args.load_initial_policy:
+    
+        # Reset environment
+        env_counter += 1
+        obs = env.reset()
+        done = False
+        episode_reward = 0
+        episode_timesteps = 0
+        episode_num += 1
     
         args.start_timesteps=0
         
