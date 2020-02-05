@@ -125,7 +125,11 @@ def _train(args):
             if total_timesteps != 0:
                 print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
                     total_timesteps, episode_num, episode_timesteps, episode_reward))
-                policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
+                    
+                if args.per:
+                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
+                else:
+                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
                 
                 train_rewards.append(episode_reward)
                 

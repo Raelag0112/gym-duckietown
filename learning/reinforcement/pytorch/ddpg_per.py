@@ -177,7 +177,7 @@ class DDPG_PER(object):
             state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001):
+    def train(self, replay_buffer, iterations, batch_size=64, discount=0.99, tau=0.001, total_timesteps):
     
         ### Added PER hyperparams
         prioritized_replay_beta0=0.4
@@ -189,12 +189,12 @@ class DDPG_PER(object):
             ### Sample replay buffer
             
             if prioritized_replay_beta_iters is None:
-                prioritized_replay_beta_iters = iterations
+                prioritized_replay_beta_iters = total_timesteps
             beta_schedule = LinearSchedule(prioritized_replay_beta_iters,
                                            initial_p=prioritized_replay_beta0,
                                            final_p=1.0)
             
-            experience = replay_buffer.sample(batch_size, beta=beta_schedule.value(t))
+            experience = replay_buffer.sample(batch_size, beta=beta_schedule.value(total_timesteps))
             (obses_t, actions, rewards, obses_tp1, dones, weights, batch_idxes) = experience
             
             state = torch.FloatTensor(obses_t).to(device)
