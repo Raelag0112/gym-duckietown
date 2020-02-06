@@ -100,6 +100,7 @@ def _train(args):
         total_timesteps = checkpoint['total_timesteps']
         train_rewards = checkpoint['train_rewards']
         episode_num = checkpoint['episode_num']
+        best_reward = checkpoint['best_reward']
 
         if str(args.policy).lower() == 'ddpg':
             policy.critic.load_state_dict(checkpoint['critic_state_dict'])
@@ -139,8 +140,8 @@ def _train(args):
                     evaluations.append(eval_reward)
                     print("\n--- rewards at time {}: {} ---".format(total_timesteps, eval_reward))
 
-                    np.savetxt("reinforcement/pytorch/results/eval_rewards.csv", np.array(evaluations), delimiter=",")
-                    np.savetxt("reinforcement/pytorch/results/train_rewards.csv", np.array(train_rewards), delimiter=",")
+                    np.savetxt("reinforcement/pytorch/results/eval_rewards_" + args.policy + ".csv", np.array(evaluations), delimiter=",")
+                    np.savetxt("reinforcement/pytorch/results/train_rewards_" + args.policy + ".csv", np.array(train_rewards), delimiter=",")
 
 
                     # Save the policy according to the best reward over training
@@ -148,6 +149,7 @@ def _train(args):
                         best_reward = eval_reward
 
                         save_dict = {
+                        'best_reward': best_reward,
                         'total_timesteps': total_timesteps,
                         'evaluations': evaluations,
                         'train_rewards': train_rewards,
