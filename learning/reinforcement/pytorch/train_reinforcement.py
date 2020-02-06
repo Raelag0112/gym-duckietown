@@ -157,7 +157,7 @@ def _train(args):
                         'actor_state_dict': policy.actor.state_dict()
                         }
 
-                        if str(args.policy).lower() == 'ddpg':
+                        if str(args.policy).lower() == 'ddpg' or str(args.policy).lower() == 'ddpg_per':
                             save_dict['critic_state_dict'] = policy.critic.state_dict()
                         if str(args.policy).lower() == 'td3':
                             save_dict['critic_1_state_dict'] = policy.critic_1.state_dict()
