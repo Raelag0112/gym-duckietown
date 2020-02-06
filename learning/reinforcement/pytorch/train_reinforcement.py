@@ -102,7 +102,7 @@ def _train(args):
         episode_num = checkpoint['episode_num']
         best_reward = checkpoint['best_reward']
 
-        if str(args.policy).lower() == 'ddpg':
+        if str(args.policy).lower() == 'ddpg' or str(args.policy).lower() == 'ddpg_per':
             policy.critic.load_state_dict(checkpoint['critic_state_dict'])
         if str(args.policy).lower() == 'td3':
             policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
