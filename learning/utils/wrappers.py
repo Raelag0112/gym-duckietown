@@ -66,26 +66,28 @@ class DtRewardWrapper(gym.RewardWrapper):
         super(DtRewardWrapper, self).__init__(env)
 
     def reward(self, reward):
-        if reward == -1000:
-            reward = -10
-        elif reward > 0:
-            reward += 10
-        else:
-            reward += 4
+        # if reward == -1000:
+        #     reward = -10
+        # elif reward > 0:
+        #     reward += 10
+        # else:
+        #     reward += 4
 
-        speed = self.env.speed
+        # speed = self.env.speed
+
+        # reward_angle = np.clip(1 - lp.angle_rad**2, -1, 1)
+        # reward_dist = np.clip(1 - 4 * np.abs(lp.dist), 0, 1)
+        # reward_speed = self.env.speed
+
         try :
             lp = self.env.get_lane_pos2(self.env.cur_pos, self.env.cur_angle)
         except NotInLane:
             return -1
 
-        reward_angle = np.clip(1 - lp.angle_rad**2, -1, 1)
-        reward_dist = np.clip(1 - 4 * np.abs(lp.dist), 0, 1)
-        reward_speed = self.env.speed
-
-
-        return reward_angle * reward_dist * reward_speed
-
+        if np.abs(lp.dist) < 0.1:
+          return self.env.speed
+        else:
+          return -1
 
 # Deprecated
 class ActionWrapper(gym.ActionWrapper):
