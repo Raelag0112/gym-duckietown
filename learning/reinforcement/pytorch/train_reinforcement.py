@@ -110,6 +110,8 @@ def _train(args):
 
     print("Starting training")
 
+    obs = env.reset()
+
     while total_timesteps < args.max_timesteps:
 
         # Select action
