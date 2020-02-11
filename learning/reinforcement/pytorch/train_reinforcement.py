@@ -68,6 +68,9 @@ def _train(args):
 
     # Keep track of train_rewards
     train_rewards = []
+    
+    # To print mean actions per episode
+    mean_action = []
 
     # Initialize policy
     if args.policy not in policies:
@@ -120,6 +123,8 @@ def _train(args):
         else:
             action = policy.predict(np.array(obs))
             action = add_noise(action, args.expl_noise, env.action_space.low, env.action_space.high)
+            
+        mean_action.append(action)
 
         # Perform action
         new_obs, reward, done, _ = env.step(action)
@@ -144,8 +149,10 @@ def _train(args):
             done = True
 
         if done:
-            print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
-                total_timesteps, episode_num, episode_timesteps, episode_reward))
+            print(("Total T: %d Episode Num: %d Episode T: %d Reward: %.2f Mean actions: %.4f , %.4f") % (
+              total_timesteps, episode_num, episode_timesteps, episode_reward, np.mean(np.array(mean_action), axis=0)[0], np.mean(np.array(mean_action), axis=0)[1]))
+                
+            mean_action =  []
 
 #                if args.per:
 #                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
