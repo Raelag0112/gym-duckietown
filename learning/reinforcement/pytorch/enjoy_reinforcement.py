@@ -15,6 +15,8 @@ from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
     DtRewardWrapper, ActionWrapper, ResizeWrapper
 from gym.wrappers import FrameStack
 
+policies = {'ddpg': DDPG, 'td3': TD3}
+
 def _enjoy(args):
     # Launch the env with our helper function
     env = launch_env()
@@ -26,6 +28,7 @@ def _enjoy(args):
     env = NormalizeWrapper(env)
     env = FrameStack(env, 4)
     env = DtRewardWrapper(env)
+    env = ActionWrapper(env)
     print("Initialized Wrappers")
 
     state_dim = env.observation_space.shape
@@ -33,20 +36,12 @@ def _enjoy(args):
     max_action = float(env.action_space.high[0])
 
     # Initialize policy
-    policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
-#    policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
+    # policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
+    # policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
 
+    policy = policies[args.policy](state_dim, action_dim, max_action)
+    policy.load('reinforcement/pytorch/models/', args.policy)
 
-    checkpoint = torch.load('reinforcement/pytorch/models/td3', map_location='cpu')
-
-    policy.actor.load_state_dict(checkpoint['actor_state_dict'])
-    evaluations = checkpoint['evaluations']
-    total_timesteps = checkpoint['total_timesteps']
-    train_rewards = checkpoint['train_rewards']
-    episode_num = checkpoint['episode_num']
-
-    policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
-    policy.critic_2.load_state_dict(checkpoint['critic_1_state_dict'])
 
     obs = env.reset()
     done = False

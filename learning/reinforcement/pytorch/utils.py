@@ -4,7 +4,7 @@ import gym
 import numpy as np
 import torch
 
-from baselines.common.segment_tree import SumSegmentTree, MinSegmentTree
+#from baselines.common.segment_tree import SumSegmentTree, MinSegmentTree
 
 def seed(seed):
     torch.manual_seed(seed)
@@ -47,7 +47,7 @@ class ReplayBuffer(object):
             self.storage.append((state, next_state, action, reward, done))
 
 
-    def sample(self, batch_size=100, flat=True):
+    def sample(self, batch_size=100, flat=False):
         ind = np.random.randint(0, len(self.storage), size=batch_size)
         states, next_states, actions, rewards, dones = [], [], [], [], []
 
@@ -96,7 +96,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         it_capacity = 1
         while it_capacity < size:
             it_capacity *= 2
-            
+
         ### Added attributes
         self._storage = []
         self._maxsize = size
@@ -118,7 +118,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self._next_idx = (self._next_idx + 1) % self._maxsize
         self._it_sum[idx] = self._max_priority ** self._alpha
         self._it_min[idx] = self._max_priority ** self._alpha
-        
+
     ### Sample encoding
     def _encode_sample(self, idxes):
         obses_t, actions, rewards, obses_tp1, dones = [], [], [], [], []

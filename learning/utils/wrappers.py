@@ -35,6 +35,7 @@ class GrayscaleWrapper(gym.ObservationWrapper):
 class NormalizeWrapper(gym.ObservationWrapper):
     def __init__(self, env=None):
         super(NormalizeWrapper, self).__init__(env)
+        #TODO flatten
         self.obs_lo = self.observation_space.low[0, 0]
         self.obs_hi = self.observation_space.high[0, 0]
         obs_shape = self.observation_space.shape
@@ -79,27 +80,32 @@ class DtRewardWrapper(gym.RewardWrapper):
             return -1
 
         reward_angle = np.clip(1 - lp.angle_rad**2, -1, 1)
-        reward_dist = np.clip(1 - lp.dist**2, -1, 1)
+        reward_dist = np.clip(1 - 4 * np.abs(lp.dist), 0, 1)
         reward_speed = self.env.speed
 
 
-        return (reward_angle + reward_dist + reward_speed) / 3
+        return reward_angle * reward_dist * reward_speed
 
 
 # Deprecated
 class ActionWrapper(gym.ActionWrapper):
     def __init__(self, env):
         super(ActionWrapper, self).__init__(env)
-        self.prev_action = []
+        self.action_space = spaces.Box(
+                low=0,
+                high=1,
+                shape=(2,),
+                dtype=np.float32
+        )
 
     def action(self, action):
-        max_delta_steering = 0.1
-        if self.prev_action != []:
-            # limit
-            prev_steering = self.prev_action[1]
-            steering = np.clip(action[1], prev_steering - max_delta_steering, prev_steering + max_delta_steering)
+    #     max_delta_steering = 0.1
+    #     if self.prev_action != []:
+    #         # limit
+    #         prev_steering = self.prev_action[1]
+    #         steering = np.clip(action[1], prev_steering - max_delta_steering, prev_steering + max_delta_steering)
 
-            action = [action[0], steering]
+    #         action = [action[0], steering]
 
-        self.prev_action = action
-        return action
+    #     self.prev_action = action
+         return action

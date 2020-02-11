@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 ### Added test import
-from reinforcement.pytorch.ddpg_per import DDPG_PER
+#from reinforcement.pytorch.ddpg_per import DDPG_PER
 
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
@@ -20,6 +20,9 @@ from gym.wrappers import FrameStack
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Available policies
+policies = {'ddpg': DDPG, 'td3': TD3}
 
 def _train(args):
     if not os.path.exists("./results"):
@@ -37,6 +40,7 @@ def _train(args):
     env = NormalizeWrapper(env)
     env = FrameStack(env, 4)
     env = DtRewardWrapper(env)
+    env = ActionWrapper(env)
     print("Initialized Wrappers")
 
     # Set seeds
@@ -46,17 +50,18 @@ def _train(args):
     action_dim = env.action_space.shape[0]
     max_action = float(env.action_space.high[0])
 
+    # Init training data
     total_timesteps = 0
     timesteps_since_eval = 0
     episode_num = 0
-    done = True
-    episode_reward = None
+    episode_reward = 0
     env_counter = 0
     reward = 0
     episode_timesteps = 0
 
+
     ### Added PER hyperparams
-    prioritized_replay_alpha=0.6
+    # prioritized_replay_alpha=0.6
 
     # Keep track of the best reward over time
     best_reward = -np.inf
@@ -65,49 +70,36 @@ def _train(args):
     train_rewards = []
 
     # Initialize policy
-    if args.policy == 'ddpg':
-        policy = DDPG(state_dim, action_dim, max_action, net_type="cnn")
-        print("Initialized DDPG")
-    if args.policy == 'td3':
-        policy = TD3(state_dim, action_dim, max_action, net_type="cnn")
-        print("Initialized TD3")
+    if args.policy not in policies:
+        raise ValueError("Policy {} is not available, chose one of : {}".format(args.policy, list(policies.keys())))
 
-    ### Added per_ddpg
-    if args.policy == 'ddpg_per':
-        policy = DDPG_PER(state_dim, action_dim, max_action, net_type="cnn")
-        print("Initialized DDPG with PER")
+    policy = policies[args.policy](state_dim, action_dim, max_action)
+
+    # ### Added per_ddpg
+    # if args.policy == 'ddpg_per':
+    #     policy = DDPG_PER(state_dim, action_dim, max_action, net_type="cnn")
+    #     print("Initialized DDPG with PER")
 
     # Evaluate untrained policy
-    evaluations= [evaluate_policy(env, policy)]
+    evaluations = [evaluate_policy(env, policy)]
 
     # Load previous policy
     if args.load_initial_policy:
 
-        # Reset environment
-        env_counter += 1
-        obs = env.reset()
-        done = False
-        episode_reward = 0
-        episode_timesteps = 0
-        episode_num += 1
-
+        # Disable random start steps
         args.start_timesteps=0
 
-        checkpoint = torch.load('reinforcement/pytorch/models/' + args.policy)
+        # Load training data
+        checkpoint = load_training_state(args.model_dir, args.policy + "_training")
 
-        policy.actor.load_state_dict(checkpoint['actor_state_dict'])
         evaluations = checkpoint['evaluations']
         total_timesteps = checkpoint['total_timesteps']
         train_rewards = checkpoint['train_rewards']
         episode_num = checkpoint['episode_num']
         best_reward = checkpoint['best_reward']
 
-        if str(args.policy).lower() == 'ddpg' or str(args.policy).lower() == 'ddpg_per':
-            policy.critic.load_state_dict(checkpoint['critic_state_dict'])
-        if str(args.policy).lower() == 'td3':
-            policy.critic_1.load_state_dict(checkpoint['critic_1_state_dict'])
-            policy.critic_2.load_state_dict(checkpoint['critic_1_state_dict'])
-
+        # Load policy
+        policy.load(args.model_dir, args.policy)
 
     ## Initialize ReplayBuffer
     if args.per:
@@ -117,99 +109,100 @@ def _train(args):
         replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
 
     print("Starting training")
+
     while total_timesteps < args.max_timesteps:
 
-        #print("timestep: {} | reward: {}".format(total_timesteps, reward))
+        # Select action
+        if total_timesteps < args.start_timesteps:
+            action = env.action_space.sample()
+        else:
+            action = policy.predict(np.array(obs))
+            action = add_noise(action, args.expl_noise, env.action_space.low, env.action_space.high)
+
+        # Perform action
+        new_obs, reward, done, _ = env.step(action)
+
+        # Update episode reward
+        episode_reward += reward
+
+        # Store data in replay buffer
+        replay_buffer.add(obs, new_obs, action, reward, float(done))
+
+        # Update network
+        if len(replay_buffer.storage) >= args.batch_size:
+            policy.update(replay_buffer, args.batch_size, args.discount, args.tau)
+
+        # Update env
+        obs = new_obs
+        episode_timesteps += 1
+        total_timesteps += 1
+        timesteps_since_eval += 1
+
+        if episode_timesteps >= args.env_timesteps:
+            done = True
 
         if done:
-            if total_timesteps != 0:
-                print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
-                    total_timesteps, episode_num, episode_timesteps, episode_reward))
+            print(("Total T: %d Episode Num: %d Episode T: %d Reward: %f") % (
+                total_timesteps, episode_num, episode_timesteps, episode_reward))
 
-                if args.per:
-                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
-                else:
-                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
+#                if args.per:
+#                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
+#                else:
+#                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
 
-                train_rewards.append(episode_reward)
+            train_rewards.append(episode_reward)
 
-                # Evaluate episode
-                if timesteps_since_eval >= args.eval_freq:
-                    timesteps_since_eval %= args.eval_freq
-                    eval_reward = evaluate_policy(env, policy)
-                    evaluations.append(eval_reward)
-                    print("\n--- rewards at time {}: {} ---".format(total_timesteps, eval_reward))
+            # Evaluate episode
+            if timesteps_since_eval >= args.eval_freq:
+                timesteps_since_eval %= args.eval_freq
+                eval_reward = evaluate_policy(env, policy)
+                evaluations.append(eval_reward)
+                print("\n--- rewards at time {}: {} ---".format(total_timesteps, eval_reward))
 
-                    np.savetxt("reinforcement/pytorch/results/eval_rewards_" + args.policy + ".csv", np.array(evaluations), delimiter=",")
-                    np.savetxt("reinforcement/pytorch/results/train_rewards_" + args.policy + ".csv", np.array(train_rewards), delimiter=",")
+                np.savetxt("reinforcement/pytorch/results/eval_rewards_" + args.policy + ".csv", np.array(evaluations), delimiter=",")
+                np.savetxt("reinforcement/pytorch/results/train_rewards_" + args.policy + ".csv", np.array(train_rewards), delimiter=",")
 
+                # Save the policy according to the best reward over training
+                if eval_reward > best_reward:
+                    best_reward = eval_reward
+                    policy.save(args.model_dir, args.policy)
+                    save_training_state(args.model_dir, args.policy + "_training", best_reward, total_timesteps, evaluations, train_rewards, episode_num)
 
-                    # Save the policy according to the best reward over training
-                    if eval_reward > best_reward:
-                        best_reward = eval_reward
-
-                        save_dict = {
-                        'best_reward': best_reward,
-                        'total_timesteps': total_timesteps,
-                        'evaluations': evaluations,
-                        'train_rewards': train_rewards,
-                        'episode_num': episode_num,
-                        'actor_state_dict': policy.actor.state_dict()
-                        }
-
-                        if str(args.policy).lower() == 'ddpg' or str(args.policy).lower() == 'ddpg_per':
-                            save_dict['critic_state_dict'] = policy.critic.state_dict()
-                        if str(args.policy).lower() == 'td3':
-                            save_dict['critic_1_state_dict'] = policy.critic_1.state_dict()
-                            save_dict['critic_2_state_dict'] = policy.critic_2.state_dict()
-
-                        ### ADD ELSE ERROR
-
-                        print('Model saved\n')
-                        torch.save(save_dict, args.model_dir + args.policy)
-
+                    print('Model saved\n')
 
             # Reset environment
-            env_counter += 1
             obs = env.reset()
-            done = False
+            env_counter += 1
             episode_reward = 0
             episode_timesteps = 0
             episode_num += 1
 
 
-
-        # Select action randomly or according to policy
-        if total_timesteps < args.start_timesteps:
-            action = env.action_space.sample()
-        else:
-            action = policy.predict(np.array(obs))
-            if args.expl_noise != 0:
-                action = (action + np.random.normal(
-                    0,
-                    args.expl_noise,
-                    size=env.action_space.shape[0])
-                          ).clip(env.action_space.low, env.action_space.high)
-
-        # Perform action
-        new_obs, reward, done, _ = env.step(action)
-
-        if episode_timesteps >= args.env_timesteps:
-            done = True
-
-        done_bool = 0 if episode_timesteps + 1 == args.env_timesteps else float(done)
-        episode_reward += reward
-
-        # Store data in replay buffer
-        replay_buffer.add(obs, new_obs, action, reward, done_bool)
-
-        obs = new_obs
-
-        episode_timesteps += 1
-        total_timesteps += 1
-        timesteps_since_eval += 1
-
     print("Finished..should return now!")
+
+def add_noise(action, expl_noise, low, high):
+    if expl_noise != 0:
+        action = (action + np.random.normal(
+            0,
+            expl_noise,
+            size=action.shape)
+            ).clip(low, high)
+    return action
+
+
+def save_training_state(directory, filename, best_reward, total_timesteps, evaluations, train_rewards, episode_num):
+    save_dict = {
+            'best_reward': best_reward,
+            'total_timesteps': total_timesteps,
+            'evaluations': evaluations,
+            'train_rewards': train_rewards,
+            'episode_num': episode_num
+            }
+
+    torch.save(save_dict, directory + filename)
+
+def load_training_state(directory, filename):
+    return torch.load(directory + filename)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
