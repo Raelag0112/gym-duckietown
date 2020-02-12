@@ -339,7 +339,7 @@ TODO : add legend to diagram
 
 \subsection{Domain Randomisation}
 \subsubsection{The randomisation API}
-The folder at \url{gym-duckietown/gym_duckietown/randomization} contains the domain randomization API. This API contains all of the pre-packaged methods for randomization within gym-duckietown, which I’ll list here. This folder also contains a readme file detailing the API.
+The folder at \url{gym-duckietown/gym_duckietown/randomization} contains the domain randomization API. This API contains all of the pre-packaged methods for randomization within gym-duckietown. This folder also contains a readme file detailing the API.
 
 The domain randomization is driven by the Randomizer class, which takes as input a configuration file and outputs (upon call to randomize) a set of settings used by the Simulator class (the core class of gym\-duckietown managing the environment). To activate any domain randomization at all, the simulator class must have domain\_rand \= true passed as a parameter to its constructor
 
@@ -354,7 +354,7 @@ If a randomizable variable is not found in the configuration file, it will be ra
     \end{enumerate}
     \item light\_pos: Makes the simulator more or less iluminated, by changing the position of the single light source.
     \item camera\_noise: Adds noise to the camera position for data augmentation purposes. This noise is applied at each render, giving the screen input a "twitchy" behaviour.
-    \item frame\_skip: No info provided. Code inspection shows this is the number of frames to skip per action. Higher frameskip makes the agent able to act less frequently.
+    \item frame\_skip: No info provided. Code inspection shows this is the number of frames to skip per action. Higher frameskip reduces the ability of the agent to change its action. Beyond randomization, frame skip is enabled by default (1 frame skipped) and its value can be passed as an argument during simulator construction.
 \end{enumerate}
 
 The API is sorely lacking in the amount of variables that can be randomized. It provides some flexibility in randomization of the input, but it provides no randomization besides frame\_skip of transitions and/or actions.
@@ -370,7 +370,7 @@ Code inspection reveals that more randomisation occurs, contingent on domain-ran
         \item cam\_height, 8\%
         \item cam\_angle, 20\%
         \item cam\_fov\_y, 20\%, camera field of view
-        side length of the ground/noise triangles generated as distractors (which themselves are generated randomly in the first place? Seems redundant to do it twice), 10\%
+        \item side length of the ground/noise triangles generated as distractors (which themselves are generated randomly in the first place? Seems redundant to do it twice), 10\%
         \item tile color, 20\% for each tile
         \item object color, 20\% for each color
         \item CAMERA\_FORWARD\_DIST of gl.glTranslatef on line 1434, 10\%
@@ -415,5 +415,4 @@ Randomizing inputs can be accomplished via the API. Other possible sources of ra
 
 
 \end{document}
-
 
