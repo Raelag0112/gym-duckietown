@@ -4,6 +4,8 @@ import gym
 import numpy as np
 import torch
 
+from collections import deque, namedtuple
+
 #from baselines.common.segment_tree import SumSegmentTree, MinSegmentTree
 
 def seed(seed):
@@ -32,46 +34,38 @@ def evaluate_policy(env, policy, eval_episodes=10, max_timesteps=500):
 # https://github.com/openai/baselines/blob/master/baselines/deepq/replay_buffer.py
 
 # Simple replay buffer
-class ReplayBuffer(object):
-    def __init__(self,max_size):
-        self.storage = []
-        self.max_size = max_size
+class ReplayBuffer:
+"""Fixed-size buffer to store experience tuples."""
 
-    # Expects tuples of (state, next_state, action, reward, done)
-    def add(self, state, next_state, action, reward, done):
-        if len(self.storage) < self.max_size:
-            self.storage.append((state, next_state, action, reward, done))
-        else:
-            # Remove random element in the memory beforea adding a new one
-            self.storage.pop(random.randrange(len(self.storage)))
-            self.storage.append((state, next_state, action, reward, done))
+    def __init__(self, buffer_size, batch_size, seed):
+        """Initialize a ReplayBuffer object.
 
+        Params
+        ======
+          action_size (int): dimension of each action
+          buffer_size (int): maximum size of buffer
+          batch_size (int): size of each training batch
+          seed (int): random seed
+        """
+        self.memory = deque(maxlen=buffer_size)
+        self.batch_size = batch_size
+        self.experience = namedtuple("Experience", field_names=["state", "action", "reward", "next_state", "done"])
+        self.seed = random.seed(seed)
 
-    def sample(self, batch_size=100, flat=False):
-        ind = np.random.randint(0, len(self.storage), size=batch_size)
-        states, next_states, actions, rewards, dones = [], [], [], [], []
+    def add(self, state, action, reward, next_state, done):
+        """Add a new experience to memory."""
+        e = self.experience(state, action, reward, next_state, done)
+        self.memory.append(e)
 
-        for i in ind:
-            state, next_state, action, reward, done = self.storage[i]
+    def sample(self):
+        """Randomly sample a batch of experiences from memory."""
+        experiences = random.sample(self.memory, k=self.batch_size)
 
-            if flat:
-                states.append(np.array(state, copy=False).flatten())
-                next_states.append(np.array(next_state, copy=False).flatten())
-            else:
-                states.append(np.array(state, copy=False))
-                next_states.append(np.array(next_state, copy=False))
-            actions.append(np.array(action, copy=False))
-            rewards.append(np.array(reward, copy=False))
-            dones.append(np.array(done, copy=False))
+        return experiences
 
-        # state_sample, action_sample, next_state_sample, reward_sample, done_sample
-        return {
-            "state": np.stack(states),
-            "next_state": np.stack(next_states),
-            "action": np.stack(actions),
-            "reward": np.stack(rewards).reshape(-1,1),
-            "done": np.stack(dones).reshape(-1,1)
-        }
+    def __len__(self):
+        """Return the current size of internal memory."""
+        return len(self.memory)
 
 
 ### Prioritized Replay Buffer

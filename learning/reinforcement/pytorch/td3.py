@@ -52,16 +52,16 @@ class TD3(object):
         state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def update(self, replay_buffer, batch_size=64, discount=0.99, tau=0.001):
+    def update(self, replay_buffer, discount=0.99, tau=0.001):
 
         # Sample replay buffer
-        sample = replay_buffer.sample(batch_size)
+        experiences = replay_buffer.sample()
 
-        state = torch.FloatTensor(sample["state"]).to(device)
-        action = torch.FloatTensor(sample["action"]).to(device)
-        next_state = torch.FloatTensor(sample["next_state"]).to(device)
-        done = torch.FloatTensor(1 - sample["done"]).to(device)
-        reward = torch.FloatTensor(sample["reward"]).to(device)
+        state = torch.from_numpy(np.array([e.state for e in experiences if e is not None])).float().to(device)
+        action = torch.from_numpy(np.array([e.action for e in experiences if e is not None])).float().to(device)
+        reward = torch.from_numpy(np.array([e.reward for e in experiences if e is not None])).float().to(device)
+        next_state = torch.from_numpy(np.array([e.next_state for e in experiences if e is not None])).float().to(device)
+        done = torch.from_numpy(np.array([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
 
         # Compute the target Q value
         target_1_Q = self.critic_target_1(next_state, self.actor_target(next_state))
@@ -123,7 +123,7 @@ class TD3(object):
 
         torch.save(save_dict, directory + filename)
 
-    def load(self, filename, directory):
+    def load(self, directory, filename):
         load_dict = torch.load(directory + filename, map_location=device)
         self.actor.load_state_dict(load_dict['actor_state_dict'])
         self.critic_1.load_state_dict(load_dict['critic_1_state_dict'])

@@ -109,7 +109,7 @@ def _train(args):
         print('Training with Prioritized Experience Reply')
         replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, alpha = prioritized_replay_alpha)
     else:
-        replay_buffer = ReplayBuffer(args.replay_buffer_max_size)
+        replay_buffer = ReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed)
 
     print("Starting training")
 
@@ -133,11 +133,11 @@ def _train(args):
         episode_reward += reward
 
         # Store data in replay buffer
-        replay_buffer.add(obs, new_obs, action, reward, float(done))
+        replay_buffer.add(obs, action, reward, new_obs, float(done))
 
         # Update network
-        if len(replay_buffer.storage) >= args.batch_size:
-            policy.update(replay_buffer, args.batch_size, args.discount, args.tau)
+        if len(replay_buffer) >= args.batch_size:
+            policy.update(replay_buffer, args.discount, args.tau)
 
         # Update env
         obs = new_obs
@@ -153,11 +153,6 @@ def _train(args):
               total_timesteps, episode_num, episode_timesteps, episode_reward, np.mean(np.array(mean_action), axis=0)[0], np.mean(np.array(mean_action), axis=0)[1]))
                 
             mean_action =  []
-
-#                if args.per:
-#                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau, total_timesteps)
-#                else:
-#                    policy.train(replay_buffer, episode_timesteps, args.batch_size, args.discount, args.tau)
 
             train_rewards.append(episode_reward)
 
