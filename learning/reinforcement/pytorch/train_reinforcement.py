@@ -61,27 +61,22 @@ def _train(args):
 
 
     ### Added PER hyperparams
-    # prioritized_replay_alpha=0.6
+    
 
     # Keep track of the best reward over time
     best_reward = -np.inf
 
-    # Keep track of train_rewards
+    #Keep track of train_rewards
     train_rewards = []
     
-    # To print mean actions per episode
+    #To print mean actions per episode
     mean_action = []
 
     # Initialize policy
     if args.policy not in policies:
         raise ValueError("Policy {} is not available, chose one of : {}".format(args.policy, list(policies.keys())))
 
-    policy = policies[args.policy](state_dim, action_dim, max_action)
-
-    # ### Added per_ddpg
-    # if args.policy == 'ddpg_per':
-    #     policy = DDPG_PER(state_dim, action_dim, max_action, net_type="cnn")
-    #     print("Initialized DDPG with PER")
+    policy = policies[args.policy](state_dim, action_dim, max_action, args.per)
 
     # Evaluate untrained policy
     evaluations = [evaluate_policy(env, policy)]
@@ -107,7 +102,7 @@ def _train(args):
     ## Initialize ReplayBuffer
     if args.per:
         print('Training with Prioritized Experience Reply')
-        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, alpha = prioritized_replay_alpha)
+        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed, initial_beta=0.5, delta_beta=2/args.max_timesteps)
     else:
         replay_buffer = ReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed)
 
