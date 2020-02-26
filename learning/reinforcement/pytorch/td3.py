@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # Paper: https://arxiv.org/abs/1802.09477
 
 class TD3(object):
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action, with_per = False, alpha = 0.7, epsilon = 1e-8):
         super(TD3, self).__init__()
 
         self.timestep = 0
@@ -46,6 +46,10 @@ class TD3(object):
         self.critic_2_optimizer = torch.optim.Adam(self.critic_2.parameters())
 
         print("Initialized Target+Opt [Critics]")
+        
+        self.with_per = with_per
+        self.alpha = alpha
+        self.epsilon = epsilon
 
     def predict(self, state):
 
@@ -55,25 +59,47 @@ class TD3(object):
     def update(self, replay_buffer, discount=0.99, tau=0.001):
 
         # Sample replay buffer
-        experiences = replay_buffer.sample()
+        if not self.with_per:
+            experiences = replay_buffer.sample()
+            
+        else:
+            experiences , priorities_list, indices = replay_buffer.sample()
+            priorities = torch.from_numpy(np.array(priorities_list)).float().to(device)
+            # Calculate importance-sampling weights
+            probs = priorities / replay_buffer.priority_sum()
+            weights = (replay_buffer.batch_size * probs)**(-replay_buffer.beta)
+            weights /= torch.max(weights)
 
         state = torch.from_numpy(np.array([e.state for e in experiences if e is not None])).float().to(device)
         action = torch.from_numpy(np.array([e.action for e in experiences if e is not None])).float().to(device)
         reward = torch.from_numpy(np.array([e.reward for e in experiences if e is not None])).float().to(device)
         next_state = torch.from_numpy(np.array([e.next_state for e in experiences if e is not None])).float().to(device)
         done = torch.from_numpy(np.array([e.done for e in experiences if e is not None]).astype(np.uint8)).float().to(device)
-
+        
         # Compute the target Q value
         target_1_Q = self.critic_target_1(next_state, self.actor_target(next_state))
 
         target_2_Q = self.critic_target_2(next_state, self.actor_target(next_state))
 
-        target_Q = reward + (done * discount * torch.min(target_1_Q,target_2_Q)).detach()
+        target_Q = reward + (done * discount * torch.min(target_1_Q.view(-1),target_2_Q.view(-1))).detach()
 
         # Get current Q estimate
-        current_Q_1 = self.critic_1(state, action)
+        current_Q_1 = self.critic_1(state, action).view(-1)
 
-        current_Q_2 = self.critic_2(state, action)
+        current_Q_2 = self.critic_2(state, action).view(-1)
+        
+        if self.with_per:
+            # Update priorities
+            td_error = torch.min(target_Q - current_Q_1,target_Q - current_Q_2)
+            updated_priorities = abs(td_error) + self.epsilon
+            replay_buffer.set_priorities(indices, updated_priorities**self.alpha)
+            replay_buffer.current_priority = max(replay_buffer.current_priority, torch.max(updated_priorities))
+            
+            # Compute critic loss
+            critic_loss = torch.mean(weights * td_error**2)
+        else:
+            # Compute critic loss
+            critic_loss = F.mse_loss(current_Q, target_Q)
 
         # Compute critics loss
         critic_1_loss = F.mse_loss(current_Q_1, target_Q)
