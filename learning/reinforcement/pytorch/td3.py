@@ -81,7 +81,7 @@ class TD3(object):
 
         target_2_Q = self.critic_target_2(next_state, self.actor_target(next_state))
 
-        target_Q = reward + (done * discount * torch.min(target_1_Q.view(-1),target_2_Q.view(-1))).detach()
+        target_Q = reward + ((1-done) * discount * torch.min(target_1_Q.view(-1),target_2_Q.view(-1))).detach()
 
         # Get current Q estimate
         current_Q_1 = self.critic_1(state, action).view(-1)
@@ -90,21 +90,21 @@ class TD3(object):
         
         if self.with_per:
             # Update priorities
-            td_error = torch.min(target_Q - current_Q_1,target_Q - current_Q_2)
-            updated_priorities = abs(td_error) + self.epsilon
+            td_error_1 = abs(target_Q - current_Q_1)
+            td_error_2 = abs(target_Q - current_Q_2)
+            updated_priorities = torch.min(td_error_1,td_error_2) + self.epsilon
             replay_buffer.set_priorities(indices, updated_priorities**self.alpha)
             replay_buffer.current_priority = max(replay_buffer.current_priority, torch.max(updated_priorities))
             
             # Compute critic loss
-            critic_loss = torch.mean(weights * td_error**2)
+            critic_1_loss = torch.mean(weights * td_error_1**2)
+
+            critic_2_loss = torch.mean(weights * td_error_2**2)
         else:
-            # Compute critic loss
-            critic_loss = F.mse_loss(current_Q, target_Q)
+            # Compute critics loss
+            critic_1_loss = F.mse_loss(current_Q_1, target_Q)
 
-        # Compute critics loss
-        critic_1_loss = F.mse_loss(current_Q_1, target_Q)
-
-        critic_2_loss = F.mse_loss(current_Q_2, target_Q)
+            critic_2_loss = F.mse_loss(current_Q_2, target_Q)
 
         # Optimize the critics
         self.critic_1_optimizer.zero_grad()
@@ -124,7 +124,6 @@ class TD3(object):
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             self.actor_optimizer.step()
-
 
         self.soft_update(tau)
         self.timestep += 1
