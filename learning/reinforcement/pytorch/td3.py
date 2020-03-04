@@ -124,8 +124,8 @@ class TD3(object):
             self.actor_optimizer.zero_grad()
             actor_loss.backward()
             self.actor_optimizer.step()
-
-        self.soft_update(tau)
+            self.soft_update(tau)
+            
         self.timestep += 1
 
     def soft_update(self, tau):
