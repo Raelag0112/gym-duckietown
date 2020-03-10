@@ -1,9 +1,9 @@
-%\documentclass{article}
-%\usepackage[utf8]{inputenc}
-
 \documentclass[12pt]{article}
 \usepackage{graphicx} % This lets you include figures
 \usepackage{hyperref} % This lets you make links to web locations
+\usepackage[utf8]{inputenc}
+\usepackage{url}
+\usepackage{amsmath}
 \graphicspath{ {./images/} }
 
 \usepackage[rightcaption]{sidecap}
@@ -60,7 +60,13 @@ The actions of the environment can take are composed by a forward velocity and a
     \item The second number corresponds to the steering angle. 1 is for the steering wheel being fully pushed to the left.
 \end{itemize}
 
-The action space can be changed to be discrete. In this case, the possible actions would be moving forward, turning left or turning right.
+The action space can be changed to be discrete. In this case, the possible actions would be moving forward, turning left or turning right. This maps to the continous space as follows:
+
+\begin{itemize}
+    \item Forward -> (0.7, 0.0)
+    \item Right -> (0.6, 1.0)
+    \item Left -> (0.6, -1.0)
+\end{itemize}
 
 \subsection{Transitions}
 The transition of a MDP is the distribution $P(s'| s, a)$, i.e. the probability of ending up in the state $s'$ if the agent is in the state s and take the action a. The transitions would typically be different inside the simulator and in real life.
@@ -68,7 +74,7 @@ The transition of a MDP is the distribution $P(s'| s, a)$, i.e. the probability 
 Inside the simulator, the transitions are considered as perfect. For an agent being at a given position and taking a certain action  ${speed, angle}$, the simulator updates the position of the agent accordingly. The state $s'$ is then the new camera signal. The state is not fully deterministic, as some objects (such as duckie pedestrians for example) may have a stochastic behaviour and appear on the camera, but the updated position of the agent is a deterministic function of the current
 position and the current action.
 
-In the real world however, the transitions between the positions are not perfect. Given a position and an action, the next position is not deterministic. It can slightly vary because of mechanical links not being perfect, because of unusual road surface. This shift in the transition distribution is one of the problem we will have to address during the simulation to reality transfer.
+In the real world however, the transitions between the positions are not perfect. Given a position and an action, the next position is not deterministic, as it depends on additional variables unknown to the agent. It can slightly vary because of mechanical links not being perfect, or because of an unusual road surface. This shift in the transition distribution is one of the problem we will have to address during the simulation to reality transfer.
 
 \subsection{Reward}
 The choice of the reward function is primordial to properly train the agent. The reward may depend on :
@@ -78,6 +84,26 @@ The choice of the reward function is primordial to properly train the agent. The
     \item The speed of the agent. The faster the better.
     \item Collisions. The agent must get a negative reward in case of collision, and possibly if it gets too  close to another object.
 \end{itemize}
+
+The default reward in duckietown is as follows:
+
+\begin{align}
+R(t) = 40 * C_{p} - 10*dist + alignment*speed \\
+C_p = \sum_{Obj} ((pos_{agent} - pos_{object}) - SR_{agent} - SR_{object}) \\
+\end{align}
+\begin{itemize}
+    \item $C_p$ is the collision penalty for being dangerously close to other objects. It is a proxy for area overlap. Notably, one can collide with several objects at once (with additive effects) and one can collide with respect to the reward function (which uses the safety radius) without the episode restarting (which depends on the collision radius). Note that collision penalty is smaller than 0 whenever there is a collision, therefore this is actually a penalty despite the positive sign.
+    \item dist is the distance between the agent's center and the closest point on the spline defining the lane's center
+    \item alignment is the dot product between direction and the normalized tangent of the road.
+    \item speed is the agent's speed
+\end{itemize}
+
+This reward function has presented several issues:
+
+\begin{enumerate}
+    \item The penalties (collision and distance) are so strong that the agent usually much prefers to go around in circles at max speed at the center of the lane than to actually follow it.
+\end{enumerate}
+
 
 The design of the reward function will condition the performance of our agent in the simulator. This reward will be used to train a policy, i.e. a mapping from a state $s$ to an action $a$ to take. This policy will need to be adapted before transfer to the real world. However, the reward does not need to be adapted. 
 
@@ -314,9 +340,82 @@ For duckiebot installation remember :
 
 
 
+\subsection{Domain Randomisation}
+\subsubsection{The randomisation API}
+The folder at \url{gym-duckietown/gym_duckietown/randomization} contains the domain randomization API. This API contains all of the pre-packaged methods for randomization within gym-duckietown. This folder also contains a readme file detailing the API.
+
+The domain randomization is driven by the Randomizer class, which takes as input a configuration file and outputs (upon call to randomize) a set of settings used by the Simulator class (the core class of gym\-duckietown managing the environment). To activate any domain randomization at all, the simulator class must have domain\_rand \= true passed as a parameter to its constructor
+
+If a randomizable variable is not found in the configuration file, it will be randomized according to the default values found in \url{gym-duckietown/gym_duckietown/randomization/config/default.json}. 3 types of distribution are supported, int, uniform and normal. 4 variables are randomizable by default:
+\begin{enumerate}
+    \item horz\_mode: The task is made harder by making the horizon more similar to the road. It can take integer values from 0 to 3 where:
+    \begin{enumerate}
+        \item 0: Sets the skybox to a blue sky, the default
+        \item 1: Sets the skybox to a gray wall, intended to be similar to room testing conditions
+        \item 2: Sets the skybox to a dark gray box
+        \item 3: Sets the skybox to a light gray box
+    \end{enumerate}
+    \item light\_pos: Makes the simulator more or less iluminated, by changing the position of the single light source.
+    \item camera\_noise: Adds noise to the camera position for data augmentation purposes. This noise is applied at each render, giving the screen input a "twitchy" behaviour.
+    \item frame\_skip: No info provided. Code inspection shows this is the number of frames to skip per action. Higher frameskip reduces the ability of the agent to change its action. Beyond randomization, frame skip is enabled by default (1 frame skipped) and its value can be passed as an argument during simulator construction.
+\end{enumerate}
+
+The API is sorely lacking in the amount of variables that can be randomized. It provides some flexibility in randomization of the input, but it provides no randomization besides frame\_skip of transitions and/or actions.
+\subsubsection{Non API Randomisation}
+Code inspection reveals that more randomisation occurs, contingent on domain-rand being activated. 
+\begin{enumerate}
+    \item Within Simulator.py: All calls to \_perturb(val,scale) distort the value passed as argument if and only if domain rand is true, otherwise they return it undisturbed. The distortion is a multiplicative \% error drawn uniformly between $1 - scale$ and $1 + scale$, with a default of $scale = 0.1$ (e.g. by default values are randomised between 90 and 110\%). The function is called on:
+    \begin{itemize}
+        \item horizon\_color, beyond the randomization introduced by horz\_mode. 10\% for blue\_sky and wall\_color sky (modes 1 and 2), 40\% for modes 3 (dark gray) and 4 (clear gray)
+        \item The parameters for glLight functions. I am currently unaware of the effect of this function. TODO: FIND OUT
+        \item ground\_color, 30\%
+        \item wheel\_dist, 10\%
+        \item cam\_height, 8\%
+        \item cam\_angle, 20\%
+        \item cam\_fov\_y, 20\%, camera field of view
+        \item side length of the ground/noise triangles generated as distractors (which themselves are generated randomly in the first place? Seems redundant to do it twice), 10\%
+        \item tile color, 20\% for each tile
+        \item object color, 20\% for each color
+        \item CAMERA\_FORWARD\_DIST of gl.glTranslatef on line 1434, 10\%
+        \item The actual tile texture loaded is randomised with randint amongst all possible candidates
+        \item Some optional objects are invisible, 33\% chance
+    \end{itemize}
+    \item Within objects.py
+    \begin{itemize}
+        \item DuckiebotObj (Cars)
+        \begin{itemize}
+            \item follow\_dist is randomised from 0.3 to a uniform between 0.3 and 0.4
+            \item velocity is randomised from 0.1 to a uniform between 0.05 and 0.15
+        \end{itemize}
+        \item DuckieObj (Pedestrians)
+        \begin{itemize}
+            \item pedestrian\_wait\_time randomised from 8 to a randint from 3 to 20, takes on new random value on same range when finish crossing street
+            \item vel randomised from 0.02 to a normal with avg 0.02 and stdev 0.005, takes on new random value on same range when finish crossing street
+        \end{itemize}
+        \item TrafficLightObj
+        \begin{itemize}
+            \item freq is randomised from 5 with randint(4,7)
+            \item The lights start randomly from off as either On or Off, 50\% chance each
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+
+\subsubsection{Randomizing inputs}
+
+
+Randomizing inputs can be accomplished via the API. Other possible sources of randomization are:
+\begin{itemize}
+    \item Changing hue of key elements: stop signs, road… Might be hard since they’re all texture based. A possible approach: Generating variations on existing textures: Automatically generate X diff textures with some other software from existing textures passed through some filters, then use the in-built texture randomiser
+    \item Adding noise to the camera acquisition (not position)? This is similar to randomising the color of the sky and objects themselves so it might not be interesting. However camera noise provides variations during a single episode or each timestep which may imitate real camera noise (or not?)
+    \item Approaching photorrealism in some way can be helpful in improving the performance (Johnson-Robertson et al.) May prove unfeasible given the simulator and available time and resources
+    \item Addding additional light sources?
+    \item Gaussian noise foreground of images and edge blurring through gaussian noise at edges on input images is also helpful (Hinterstoisser et al.) The technique can be extended to other blending techniques (Dwibedi et al.)
+\end{itemize}
+\subsubsection{Randomizing transitions}
+\subsubsection{Randomizing actions}
 
 
 
 \end{document}
-
 
