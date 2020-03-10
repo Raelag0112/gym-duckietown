@@ -17,7 +17,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DDPG(object):
 
-    def __init__(self, state_dim, action_dim, max_action, with_per = False, alpha = 0.7, epsilon = 1e-8):
+    def __init__(self, state_dim, action_dim, max_action, with_per = False, alpha = 0.7, epsilon = 1e-8, grad_clipping = False):
         super(DDPG, self).__init__()
 
         print("Starting DDPG init")
@@ -44,6 +44,8 @@ class DDPG(object):
         self.with_per = with_per
         self.alpha = alpha
         self.epsilon = epsilon
+
+        self.grad_clipping = grad_clipping
         
     def predict(self, state):
         state = torch.FloatTensor(np.expand_dims(state, axis=0)).to(device)
@@ -93,6 +95,9 @@ class DDPG(object):
         # Optimize the critic
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
+        if self.grad_clipping:
+                for param in self.critic.nn.parameters():
+                    param.grad.data.clamp_(-1, 1)
         self.critic_optimizer.step()
 
         # Compute actor loss
@@ -101,6 +106,9 @@ class DDPG(object):
         # Optimize the actor
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
+        if self.grad_clipping:
+                for param in self.actor.nn.parameters():
+                    param.grad.data.clamp_(-1, 1)
         self.actor_optimizer.step()
 
         self.soft_update(tau)

@@ -6,6 +6,8 @@ import torch
 import os
 import numpy as np
 
+from torch.utils.tensorboard import SummaryWriter
+
 ### Added test import
 #from reinforcement.pytorch.ddpg_per import DDPG_PER
 
@@ -58,11 +60,9 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
-
-
-    ### Added PER hyperparams
     
-
+    avg_episodes = 100
+    
     # Keep track of the best reward over time
     best_reward = -np.inf
 
@@ -71,15 +71,29 @@ def _train(args):
     
     #To print mean actions per episode
     mean_action = []
+    
+    #To keep track of moving averages
+    moving_avgs = []
+
+    #Summary writer for tensorboard
+    writer = SummaryWriter(log_dir='reinforcement/pytorch/runs')
 
     # Initialize policy
     if args.policy not in policies:
         raise ValueError("Policy {} is not available, chose one of : {}".format(args.policy, list(policies.keys())))
 
-    policy = policies[args.policy](state_dim, action_dim, max_action, args.per)
+    policy = policies[args.policy](state_dim, action_dim, max_action, args.per, args.gradclip)
 
     # Evaluate untrained policy
     evaluations = [evaluate_policy(env, policy)]
+    moving_avgs.append(evaluations[0])
+
+    ## Initialize ReplayBuffer
+    if args.per:
+        print('Training with Prioritized Experience Reply')
+        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed, initial_beta=0.5, delta_beta=2/args.max_timesteps)
+    else:
+        replay_buffer = ReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed)
 
     # Load previous policy
     if args.load_initial_policy:
@@ -95,16 +109,10 @@ def _train(args):
         train_rewards = checkpoint['train_rewards']
         episode_num = checkpoint['episode_num']
         best_reward = checkpoint['best_reward']
+        moving_avgs = checkpoint['moving_avgs']
 
         # Load policy
         policy.load(args.model_dir, args.policy)
-
-    ## Initialize ReplayBuffer
-    if args.per:
-        print('Training with Prioritized Experience Reply')
-        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed, initial_beta=0.5, delta_beta=2/args.max_timesteps)
-    else:
-        replay_buffer = ReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed)
 
     print("Starting training")
 
@@ -144,32 +152,43 @@ def _train(args):
             done = True
 
         if done:
-            print(("Total T: %d Episode Num: %d Episode T: %d Reward: %.2f Mean actions: %.4f , %.4f") % (
-              total_timesteps, episode_num, episode_timesteps, episode_reward, np.mean(np.array(mean_action), axis=0)[0], np.mean(np.array(mean_action), axis=0)[1]))
-                
-            mean_action =  []
+            print(("Total T: %d Episode Num: %d \nMean actions: %.2f %.2f Episode T: %d Reward: %.1f Moving Average: %.1f") % (
+              total_timesteps, episode_num, np.mean(np.array(mean_action), axis=0)[0], np.mean(np.array(mean_action), axis=0)[1], episode_timesteps, episode_reward, moving_avgs[-1]))
 
             train_rewards.append(episode_reward)
+            moving_avgs.append(moving_average(train_rewards,avg_episodes))
 
+            writer.add_scalar("Episode/rewards", episode_reward, episode_num)
+            writer.add_scalar("Episode/MovingAverage", moving_avgs[-1], episode_num)
+            writer.add_scalar("Episode/Wheel1Mean", np.mean(np.array(mean_action), axis=0)[0], episode_num)
+            writer.add_scalar("Episode/Wheel2Mean", np.mean(np.array(mean_action), axis=0)[1], episode_num)
+            
             # Evaluate episode
             if timesteps_since_eval >= args.eval_freq:
+
                 timesteps_since_eval %= args.eval_freq
                 eval_reward = evaluate_policy(env, policy)
                 evaluations.append(eval_reward)
-                print("\n--- rewards at time {}: {} ---".format(total_timesteps, eval_reward))
+
+                writer.add_scalar("Episode/Evaluation", eval_reward, episode_num)
+
+                print("\n-+-+-+-+-+-+-+-+-+-+ Evaluation reward at time {}: {} +-+-+-+-+-+-+-+-+-+-".format(total_timesteps, eval_reward))
 
                 np.savetxt("reinforcement/pytorch/results/eval_rewards_" + args.policy + ".csv", np.array(evaluations), delimiter=",")
                 np.savetxt("reinforcement/pytorch/results/train_rewards_" + args.policy + ".csv", np.array(train_rewards), delimiter=",")
+                np.savetxt("reinforcement/pytorch/results/moving_averages_" + args.policy + ".csv", np.array(moving_avgs), delimiter=",")
 
                 # Save the policy according to the best reward over training
                 if eval_reward > best_reward:
                     best_reward = eval_reward
                     policy.save(args.model_dir, args.policy)
-                    save_training_state(args.model_dir, args.policy + "_training", best_reward, total_timesteps, evaluations, train_rewards, episode_num)
+                    save_training_state(args.model_dir, args.policy + "_training", best_reward, total_timesteps, evaluations, train_rewards, episode_num, moving_avgs)
 
-                    print('Model saved\n')
+                    print('-+-+-+-+-+-+-+-+-+-+ Model saved +-+-+-+-+-+-+-+-+-+-\n')
 
             # Reset environment
+            mean_action =  []
+
             obs = env.reset()
             env_counter += 1
             episode_reward = 0
@@ -189,19 +208,26 @@ def add_noise(action, expl_noise, low, high):
     return action
 
 
-def save_training_state(directory, filename, best_reward, total_timesteps, evaluations, train_rewards, episode_num):
+def save_training_state(directory, filename, best_reward, total_timesteps, evaluations, train_rewards, episode_num, moving_avgs):
     save_dict = {
             'best_reward': best_reward,
             'total_timesteps': total_timesteps,
             'evaluations': evaluations,
             'train_rewards': train_rewards,
-            'episode_num': episode_num
+            'episode_num': episode_num,
+            'moving_avgs': moving_avgs
             }
 
     torch.save(save_dict, directory + filename)
 
 def load_training_state(directory, filename):
     return torch.load(directory + filename)
+    
+def moving_average(x,n_episodes):
+    if len(x) < n_episodes:
+        return np.mean(x)
+    else:
+        return np.mean(x[-n_episodes:])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -225,5 +251,6 @@ if __name__ == '__main__':
     parser.add_argument('--load_initial_policy', help='Start the training on a loaded polisy', action = 'store_true')
     parser.add_argument('--policy', type=str, default='ddpg', help='Name of the initial policy')
     parser.add_argument('--per', help='Train with Prioritized Experience Replay', action = 'store_true')
+    parser.add_argument('--gradclip', help='Gradient clipping', action = 'store_true')
 
     _train(parser.parse_args())
