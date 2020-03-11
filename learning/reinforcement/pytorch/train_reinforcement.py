@@ -88,6 +88,8 @@ def _train(args):
     evaluations = [evaluate_policy(env, policy)]
     moving_avgs.append(evaluations[0])
 
+    writer.add_scalar("Timesteps/EvaluationReward", evaluations[0], total_timesteps)
+
     ## Initialize ReplayBuffer
     if args.per:
         print('Training with Prioritized Experience Reply')
@@ -158,10 +160,10 @@ def _train(args):
             train_rewards.append(episode_reward)
             moving_avgs.append(moving_average(train_rewards,avg_episodes))
 
-            writer.add_scalar("Episode/rewards", episode_reward, episode_num)
-            writer.add_scalar("Episode/MovingAverage", moving_avgs[-1], episode_num)
-            writer.add_scalar("Episode/Wheel1Mean", np.mean(np.array(mean_action), axis=0)[0], episode_num)
-            writer.add_scalar("Episode/Wheel2Mean", np.mean(np.array(mean_action), axis=0)[1], episode_num)
+            writer.add_scalar("Timesteps/Rewards", episode_reward, total_timesteps)
+            writer.add_scalar("Timesteps/MovingAverage", moving_avgs[-1], total_timesteps)
+            #writer.add_scalar("Episode/Wheel1Mean", np.mean(np.array(mean_action), axis=0)[0], episode_num)
+            #writer.add_scalar("Episode/Wheel2Mean", np.mean(np.array(mean_action), axis=0)[1], episode_num)
             
             # Evaluate episode
             if timesteps_since_eval >= args.eval_freq:
@@ -170,7 +172,7 @@ def _train(args):
                 eval_reward = evaluate_policy(env, policy)
                 evaluations.append(eval_reward)
 
-                writer.add_scalar("Episode/Evaluation", eval_reward, episode_num)
+                writer.add_scalar("Timesteps/EvaluationReward", eval_reward, total_timesteps)
 
                 print("\n-+-+-+-+-+-+-+-+-+-+ Evaluation reward at time {}: {} +-+-+-+-+-+-+-+-+-+-".format(total_timesteps, eval_reward))
 
