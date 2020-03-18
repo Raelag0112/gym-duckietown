@@ -1,0 +1,18 @@
+\chapter*{Introduction}
+
+Reinforcement Rearning is an area of machine learning. 
+The goal is for an agent to learn an optimal behaviour and adapt its comportement, based on experience, in a given environment. 
+Reinforcement Learning has been very successful in the last few years, notably for its great performance in games (e.g. AlphaGo\footnote{Silver, D., Schrittwieser, J., Simonyan, K. et al. Mastering the game of Go without human knowledge. Nature 550, 354–359 (2017)}). 
+However, it suffers from a lack of industrial applications.
+
+One of the reason for this is that an agent needs a lot of experience in order to learn a reasonable behaviour. 
+Those simulations must be run in a simulator for safety, speed and financial reasons. 
+Moreover, the transfer of behaviour from the simulated agent to the real world (for example an autonomous vehicle) is far from being trivial.
+Even for high quality simulators, there is a shift in both states and transitions spaces between the simulator and the real world.
+
+The purpose of this project is to study different methods to robustly train an autonomous car in a simulator, so that the real-world agent behaves as suited.
+
+
+DuckieTown\footnote{See https://www.duckietown.org/} environment will be used during all the project.
+It provides a simulator (Gym-Duckietown), a real-world agent and a real-world environment. 
+

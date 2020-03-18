@@ -1,0 +1,55 @@
+
+\chapter{Duckietown environment}
+
+An environment in which a Reinforcement Learning agent is trained is represented by a Markov Decision Process (MDP). A MDP is basically a 4-tuple $(S, A, P_a, R_a)$. Let's detail each of these components for duckietown. 
+
+\section{State}
+In a MDP, the state is defined by the state of the environment as it is seen by the agent. Here, the robot contains only one sensor, the camera. The camera has a resolution of 160x120, and thus the state space is $S = [0, 255]^{160x120x3}$ (3 is for the 3 RGB colors).
+
+\section{Actions}
+The actions of the environment can take are composed by a forward velocity and a steering angle. By default, the action space is continuous, $A = [-1, 1]^2$:
+\begin{itemize}
+    \item The first number corresponds to the forward velocity. 1 is for going full speed forward, -1 is for full speed backward.
+    \item The second number corresponds to the steering angle. 1 is for the steering wheel being fully pushed to the left.
+\end{itemize}
+
+The action space can be changed to be discrete. In this case, the possible actions would be moving forward, turning left or turning right.
+
+\section{Transitions}
+The transition of a MDP is the distribution $P(s'| s, a)$, i.e. the probability of ending up in the state $s'$ if the agent is in the state s and take the action a. The transitions would typically be different inside the simulator and in real life.
+
+Inside the simulator, the transitions are considered as perfect. For an agent being at a given position and taking a certain action  ${speed, angle}$, the simulator updates the position of the agent accordingly. The state $s'$ is then the new camera signal. The state is not fully deterministic, as some objects (such as duckie pedestrians for example) may have a stochastic behaviour and appear on the camera, but the updated position of the agent is a deterministic function of the current
+position and the current action.
+
+In the real world however, the transitions between the positions are not perfect. Given a position and an action, the next position is not deterministic. It can slightly vary because of mechanical links not being perfect, because of unusual road surface. This shift in the transition distribution is one of the problem we will have to address during the simulation to reality transfer.
+
+\section{Reward}
+The choice of the reward function is primordial to properly train the agent. The reward may depend on :
+
+\begin{itemize}
+    \item The position of the agent. The position may be used to compute the distance from a target position, and the distance from the middle of the lane.
+    \item The speed of the agent. The faster the better.
+    \item Collisions. The agent must get a negative reward in case of collision, and possibly if it gets too  close to another object.
+\end{itemize}
+
+The default reward in duckietown is as follows:
+
+\begin{align}
+R(t) = 40 * C_{p} - 10*dist + alignment*speed \\
+C_p = \sum_{Obj} ((pos_{agent} - pos_{object}) - SR_{agent} - SR_{object}) \\
+\end{align}
+\begin{itemize}
+    \item $C_p$ is the collision penalty for being dangerously close to other objects. It is a proxy for area overlap. Notably, one can collide with several objects at once (with additive effects) and one can collide with respect to the reward function (which uses the safety radius) without the episode restarting (which depends on the collision radius). Note that collision penalty is smaller than 0 whenever there is a collision, therefore this is actually a penalty despite the positive sign.
+    \item dist is the distance between the agent's center and the closest point on the spline defining the lane's center
+    \item alignment is the dot product between direction and the normalized tangent of the road.
+    \item speed is the agent's speed
+\end{itemize}
+
+This reward function has presented several issues:
+
+\begin{enumerate}
+    \item The penalties (collision and distance) are so strong that the agent usually much prefers to go around in circles at max speed at the center of the lane than to actually follow it.
+\end{enumerate}
+
+
+The design of the reward function will condition the performance of our agent in the simulator. This reward will be used to train a policy, i.e. a mapping from a state $s$ to an action $a$ to take. This policy will need to be adapted before transfer to the real world. However, the reward does not need to be adapted. 
