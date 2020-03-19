@@ -1,2 +1,43 @@
-\chapter{Transfer to the Duckiebot}
+\chapter{Reinforcement Learning Training}%
+
+\section{Training Scipt}%
+
+The learning is performed using the train\_reinforcement.py script in the learning/reiforcement/pytorch directory.
+In order to execute it, change into the directory ./learning and run :
+
+\begin{lstlisting}{laguage=bash}
+    python -m reinforcement.pytorch.train_reinforcement
+\end{lstlisting}
+
+If an error is returned stating that a module doesn't exist, check if PYTHONPATH variable contains the repository root folder.
+
+\begin{lstlisting}{laguage=bash}
+    echo $PYTHONPATH
+\end{lstlisting}
+
+If it doesn't, get back to the root directory of the project and run:
+
+\begin{lstlisting}{laguage=bash}
+    cd ../
+    export PYTHONPATH="${PYTHONPATH}:`pwd`"
+\end{lstlisting}
+
+The training can be tweaked by passing some hyperparameters when executing train\_reinforcement.
+A list of this parameters can be accessed by running :
+
+\begin{lstlisting}{language=bash}
+    python -m reinforcement.pytorch.train_reinforcement --h
+\end{lstlisting}
+
+\section{Policy}%
+
+The policy can be tweaked through the "--policy" argument, accepting as a string the name of the policy to use to train the agent.
+Currently available values are ddpg\cite{ddpg} and td3\cite{td3}, ddpg being the default.
+
+The policies are defined in their own files (e.g. ddpg.py and td3.py).
+The implementation is decoupled from the architecture of actors and critic, which are defined in actor.py and critic.py
+
+Among these paramters, you can notice the "--per" parameter, which can be used to use a Prioritize Experience Replay buffer.
+It is for now functional with the ddpg algorithm, \textbf{not with the td3}.
+
 

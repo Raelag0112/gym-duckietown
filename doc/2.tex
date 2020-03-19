@@ -1,7 +1,7 @@
 
 \chapter{Gym-DuckieTown Simulator}
 
-From the README.md in the github repository \footnote{$https://github.com/duckietown/gym-duckietown$}, here is an introduction to Gym-Duckietown. 
+From the README.md in the github repository \footnote{$https://github.com/duckietown/gym-duckietown$}, here is an introduction to Gym-Duckietown.
 
  \begin{quotation}
 Gym-Duckietown is a simulator for the Duckietown Universe, written in pure Python/OpenGL (Pyglet). It puts the agent, a Duckiebot, inside of an instance of a Duckietown: a loop of roads with turns, intersections, obstacles, Duckie pedestrians, and other Duckiebots. It can be a pretty hectic place!
@@ -18,13 +18,15 @@ The installation is pretty straight-forward from the repository. Use the followi
     conda env create -f environment.yaml
 \end{lstlisting}
 
-The installation has been tested on Windows, Linux and MacOS. Some problems may be encountered for the installation of certain packages. They can be resolved with package-specific installation instructions. 
-For example, the installation of pyglet may raise an issue. It can be resolved by installing it from the pyglet github repository. 
+The installation has been tested on Windows, Linux and MacOS. Some problems may be encountered for the installation of certain packages.
+They can be resolved with package-specific installation instructions.
+For example, the installation of pyglet may raise an issue.
+It can be resolved by installing it from the pyglet github repository.
 
 To use the simulator, the environment must be activated :
- 
+
 \begin{lstlisting}[language=bash]
-    conda activate gym-duckietown
+    source activate gym-duckietown
 \end{lstlisting}
 
 And the root folder of the project must be added to the PYTHONPATH environment variable.
@@ -35,7 +37,6 @@ On linux :
 
 On Windows, environment variable can be accessed in the parameters,  advanced parameters. You can then append the path of your project folder to the PYTHONPATH variable if it exists, or create it otherwise.
 
-
 \section{Manual Control}
 A UI application can be launched to manually control the robot. Actions can be sent from the keyboard, and images from the DuckieBot camera are displayed. Here is a simple command to launch the application :
 
@@ -44,7 +45,7 @@ $ ./manual_control.py --env-name Duckietown-udem1-v0
 \end{lstlisting}
 
 \subsection{Parameters}
-Here is a list of parameters which can be used. 
+Here is a list of parameters which can be used.
 
 \begin{itemize}
 	\item env-name: the name of the environment to execute (TODO anchor to env description)
@@ -68,68 +69,56 @@ Here is a list of keys which can be used during the simulation.
 \end{itemize}
 
 \subsection{Logs}
-The github repository contains a branch "experiment". This branch is to be used to do any experiment on the simulator. The main difference from a classical "develop" branch is that it does not aim at being merged into the master branch. 
+The github repository contains a branch "experiment".
+This branch is to be used to do any experiment on the simulator.
+The main difference from a classical "develop" branch is that it does not aim at being merged into the master branch.
 
-In this branch, we designed a logger for the manual control application. At each time step, this logger will log the current position of the agent, the current speed, the current distance from the lane, the action took. The goal is to manually control the agent so that it behaves as we would expect. We would then be able to check the logs, and use them to design a reward function.
+In this branch, we designed a logger for the manual control application.
+At each time step, this logger will log the current position of the agent, the current speed, the current distance from the lane, the action took.
+The goal is to manually control the agent so that it behaves as we would expect.
+We would then be able to check the logs, and use them to design a reward function.
 
-To enable this option, pass the --output option to manual\_control.py. You can optionally specify another option `--filename example.csv` to specify the name of the output file, which would be in data/example.csv. If no file-name is specified, the logs will be stored in data/manual\_controli.csv, where i is the first number for which this path is free.
+To enable this option, pass the --output option to manual\_control.py.
+You can optionally specify another option `--filename example.csv` to specify the name of the output file, which would be data/example.csv.
+If no file-name is specified, the logs will be stored in data/manual\_controli.csv, where i is the first number for which this path is free.
 
 When the episode is done, the manual control must be exited by pressing the S key to save the output.
 
-The learning is performed using the train\_reinforcement.py script. In order to execute it, change into the directory learning and run : 
-
-\begin{lstlisting}{laguage=bash}
-    python -m reinforcement.pytorch.train_reinforcement
-\end{lstlisting}
-
-If an error is returned stating that a module doesn't exist, check if PYTHONPATH variable contains the repository base folder.
-
-\begin{lstlisting}{laguage=bash}
-    echo $PYTHONPATH
-\end{lstlisting}
-
-If it doesn't, get back to your to the root directory of the project and run: 
-
-\begin{lstlisting}{laguage=bash}
-    export PYTHONPATH="${PYTHONPATH}:`pwd`"
-\end{lstlisting}
-
-The default algorithm implemented is DDPG. It can be tweaked by passing some hyperparameters when executing train\_reinforcement. A list of the parameters can be accessed by running :
-
-\begin{lstlisting}{language=bash}
-    python -m reinforcement.pytorch.train_reinforcement --h
-\end{lstlisting}
 
 \section{Create Maps}
-You can very easily create a new \textbf{Duckietown} environment with a text editor. A Duckietown's map is a \textit{.yaml} file, so you have to save your new map in the folder \textbf{maps} as "\textit{my\_new\_map.yaml}" (the path should looks like this one : \textit{./gym-duckietown-master/gym\_duckietown/maps}).
-\newline
+You can very easily create a new \textbf{Duckietown} environment with a text editor.
+A Duckietown's map is a \textit{.yaml} file, so you have to save your new map in the folder \textbf{maps} as "\textit{my\_new\_map.yaml}" (the path should looks like this one : \textit{./gym-duckietown-master/gym\_duckietown/maps}).
 
-If you want to see your map, you can use the following line in the terminal : \newline
+If you want to see your map, you can use the following line in the terminal :
 
 \begin{lstlisting}{language=bash}
-./manual_control.py --env-name Duckietown-udem1-v0 
---map-name my\_new\_map}
+./manual_control.py --env-name Duckietown-udem1-v0
+--map-name my\_new\_map
 \end{lstlisting}
 
-\noindent Your robot will be manually controlled in your map.\newline
+
+\noindent Your robot will be manually controlled in your map.
 
 
-\noindent A grassroots level of your \textit{.yaml} should looks like this :\newline
-\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_
+\noindent A grassroots level of your \textit{.yaml} should looks like this :
+
+\begin{center}
+    \line(1,0){400}
+\end{center}
 
 \noindent tiles:\newline
 
-\noindent- [floor, floor, floor        , grass        , grass        , grass, floor, floor]\newline
-\noindent- [floor, floor       , grass        , grass        , straight/S   , grass, floor, floor]\newline
-\noindent- [floor, grass       , grass        , curve\_left/W , curve\_right/S, grass, floor, floor]\newline
-\noindent- [grass, grass       , curve\_left/W , curve\_right/S, grass        , grass, floor, floor]\newline
-\noindent- [grass, curve\_left/W, curve\_right/S, grass        , grass        , floor, floor, floor]\newline
-\noindent- [grass, curve\_left/S, curve\_right/E, grass        , grass        , floor, floor, floor]\newline
-\noindent- [grass, grass       , curve\_left/S , curve\_right/E, grass        , floor, floor, floor]\newline
-\noindent- [floor, grass       , curve\_left/W , curve\_right/S, grass        , floor, floor, floor]\newline
-\noindent- [floor, grass       , straight/S   , grass        , grass        , floor, floor, floor]\newline
-\noindent- [floor, grass       , grass        , grass        , floor        , floor, floor, floor]\newline
-\noindent- [floor, floor       , floor        , floor        , floor        , floor, floor, floor]\newline
+\noindent- [floor, floor, floor, grass, grass, grass, floor, floor]\newline
+\noindent- [floor, floor, grass, grass, straight/S, grass, floor, floor]\newline
+\noindent- [floor, grass, grass, curve\_left/W, curve\_right/S, grass, floor, floor]\newline
+\noindent- [grass, grass, curve\_left/W, curve\_right/S, grass, grass, floor, floor]\newline
+\noindent- [grass, curve\_left/W, curve\_right/S, grass, grass, floor, floor, floor]\newline
+\noindent- [grass, curve\_left/S, curve\_right/E, grass, grass, floor, floor, floor]\newline
+\noindent- [grass, grass, curve\_left/S, curve\_right/E, grass, floor, floor, floor]\newline
+\noindent- [floor, grass, curve\_left/W ,curve\_right/S, grass, floor, floor, floor]\newline
+\noindent- [floor, grass, straight/S, grass, grass, floor, floor, floor]\newline
+\noindent- [floor, grass, grass, grass, floor, floor, floor, floor]\newline
+\noindent- [floor, floor, floor, floor, floor, floor, floor, floor]\newline
 
 \noindent objects:\newline
 
@@ -149,12 +138,20 @@ If you want to see your map, you can use the following line in the terminal : \n
   height: 0.3\newline
 
 \noindent tile\_size: 0.585\newline
-\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\newline
+\begin{center}
+    \line(1,0){400}
+\end{center}
 
-For each line, the number of tiles has to remain the same. The \textbf{tile\_size} and the \textbf{height} of every object can change, but insofar as your goal is to transpose the simulation to the real world, you must not change their values. If so, you should have \textbf{tile\_size}$=0.585$ (for the conventional heights of the objects will be given below).\newline
 
-You can find your way in the map knowing that going upward is going North, and knowing that when you drive on a road tile, the name of the road tile tells you which direction you were facing when you arrived on it, and by which direction you will leave the tile. Let's give an example : the tile "\textit{curve\_left/W}" means that you arrived on it while you were moving West, and the fact that you'll turn left on it says you are going to leave the tile by the South (it's of course reversible, you can arrive from South facing North, and leave to the East).\newline
-You can also know your position $(x,\ y)\in\mathbb{R}^2$ on the map (this is the way you put objects on it). The point $[0,\ 0]$ matches the upper left corner of the upper left tile of the map (so the coordinates start at the very North/West). The coordinates keep going higher as you move toward South/East, increasing of 1 each time you go through one tile.\newline
+For each line, the number of tiles has to remain the same.
+The \textbf{tile\_size} and the \textbf{height} of every object can change, but insofar as your goal is to transpose the simulation to the real world, you must not change their values.
+If so, you should have \textbf{tile\_size}$=0.585$ (for the conventional heights of the objects will be given below).
+
+You can find your way in the map knowing that going upward is going North, and knowing that when you drive on a road tile, the name of the road tile tells you which direction you were facing when you arrived on it, and by which direction you will leave the tile.
+Let's give an example : the tile "\textit{curve\_left/W}" means that you arrived on it while you were moving West, and the fact that you'll turn left on it says you are going to leave the tile by the South (it's of course reversible, you can arrive from South facing North, and leave to the East).
+You can also know your position $(x,\ y)\in\mathbb{R}^2$ on the map (this is the way you put objects on it).
+The point $[0,\ 0]$ matches the upper left corner of the upper left tile of the map (so the coordinates start at the very North/West).
+The coordinates keep going higher as you move toward South/East, increasing of 1 each time you go through one tile.
 
 Here is the list of the tiles you can use to build your map:
 
@@ -265,7 +262,7 @@ If a randomizable variable is not found in the configuration file, it will be ra
 
 The API is sorely lacking in the amount of variables that can be randomized. It provides some flexibility in randomization of the input, but it provides no randomization besides frame\_skip of transitions and/or actions.
 \subsection{Non API Randomisation}
-Code inspection reveals that more randomisation occurs, contingent on domain-rand being activated. 
+Code inspection reveals that more randomisation occurs, contingent on domain-rand being activated.
 \begin{enumerate}
     \item Within Simulator.py: All calls to \_perturb(val,scale) distort the value passed as argument if and only if domain rand is true, otherwise they return it undisturbed. The distortion is a multiplicative \% error drawn uniformly between $1 - scale$ and $1 + scale$, with a default of $scale = 0.1$ (e.g. by default values are randomised between 90 and 110\%). The function is called on:
     \begin{itemize}

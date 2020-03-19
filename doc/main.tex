@@ -10,7 +10,7 @@
 \usepackage{roboto}
 \usepackage{a4wide}
 \usepackage{graphicx}
-\graphicspath{{images/}}
+\graphicspath{images/}
 \usepackage{subfig}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
@@ -132,6 +132,10 @@ urlcolor=black}
 \newcommand{\Image}{\ensuremath{\text{Im}}}
 \newcommand{\Span}{\ensuremath{\text{Span}}}
 
+\usepackage[style=numeric]{biblatex}
+\usepackage{csquotes}
+\addbibresource{articles.bib}
+
 \newtheoremstyle{break}
   {11pt}{11pt}%
   {\itshape}{}%
@@ -237,6 +241,9 @@ urlcolor=black}
 \include{1}
 \include{2}
 \include{3}
+\include{4}
+
+\printbibliography
 
 \end{document}
 

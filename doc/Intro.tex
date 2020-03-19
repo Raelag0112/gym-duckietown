@@ -1,18 +1,26 @@
 \chapter*{Introduction}
 
-Reinforcement Rearning is an area of machine learning. 
-The goal is for an agent to learn an optimal behaviour and adapt its comportement, based on experience, in a given environment. 
-Reinforcement Learning has been very successful in the last few years, notably for its great performance in games (e.g. AlphaGo\footnote{Silver, D., Schrittwieser, J., Simonyan, K. et al. Mastering the game of Go without human knowledge. Nature 550, 354–359 (2017)}). 
+Reinforcement Rearning (RL) is an area of machine learning.
+The goal is for an agent to learn an optimal behaviour and adapt its comportement, based on experience, in a given environment.
+Reinforcement Learning has been very successful in the last few years, notably for its great performance in games (e.g. AlphaGo \cite{rlgames}).
 However, it suffers from a lack of industrial applications.
 
-One of the reason for this is that an agent needs a lot of experience in order to learn a reasonable behaviour. 
-Those simulations must be run in a simulator for safety, speed and financial reasons. 
+One of the reason for this is that an agent needs a lot of experience in order to learn a reasonable behaviour.
+Those learning experiences must be run in a simulator for safety, speed and financial reasons.
 Moreover, the transfer of behaviour from the simulated agent to the real world (for example an autonomous vehicle) is far from being trivial.
 Even for high quality simulators, there is a shift in both states and transitions spaces between the simulator and the real world.
 
-The purpose of this project is to study different methods to robustly train an autonomous car in a simulator, so that the real-world agent behaves as suited.
+The purpose of this project is to study different methods to robustly train an autonomous car in a simulator via RL, in order for the real-world agent to behave as suited.
 
+All the project experiments will be based on Duckietown\footnote{\url{https://www.duckietown.org/}} resources.
+The Duckietown fundation is a non-profit foundation providing tools dedicated to education and research in the fields of AI and robotics.
+In particular, it provides a gym-based simulator (gym-duckietown), a robot (Duckiebot) and a real world environment (Duckietown).
 
-DuckieTown\footnote{See https://www.duckietown.org/} environment will be used during all the project.
-It provides a simulator (Gym-Duckietown), a real-world agent and a real-world environment. 
+This document aims at providing an understanding of the basic concepts required to work on the project.
+
+% TODO Developement plan
+
+A fork of the gym-duckietown repository is dedicated to this project\footnote{\url{https://github.com/vcoyette/gym-duckietown}}.
+The latest version of this manual can be found on the branch documentation.
+
 
