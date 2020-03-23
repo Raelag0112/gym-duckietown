@@ -1,37 +1,39 @@
 \chapter{Duckietown environment}
 
-A reinforcement learning agent is usually trained in an environment described as a Markov Decision Process (MDP).
+A reinforcement learning agent usually acts in an environment described by a Markov Decision Process (MDP).
 A MDP is basically a 4-tuple $(S, A, P_a, R_a)$.
-Let's detail each of these components for the duckietown environment.
+Let's define each of these components for the duckietown environment.
 
 \section{State}
 The state S is the state of the environment from the agent point of view.
-Here, the robot contains only one sensor, the camera.
-The state of this environment is the output of this camera.
-The camera has a resolution of 640x480, and thus the state space is $S = [0, 255]^{640x480x3}$ (3 is for the 3 RGB colors).
+In our case, the robot contains only one sensor, the camera.
+Thus, the states of this MDP are the simulated images in the simulator or the camera output in the real world.
+The camera has a resolution of 640x480, so the state space is $S = \{0, 255\}^{640x480x3}$ (the 3 stands for the 3 RGB colors).
 
 \section{Actions}
-The action is composed by the velocities of each of the two wheels.
-By default, the action space is continuous, $A = [-1, 1]^2$, $1$ being full forward velocity, $-1$ full backward.
+The actions are composed by the velocities of each of the two wheels.
+By default, the action space is continuous, $A = [-1, 1]^2$, $1$ being full forward velocity for a wheel, $-1$ full backward.
 
 \textbf{Caution :}
-Be careful here as the definition of the actions in the README of the duckietown repository is describing actions differently.
-It also defines a two-element tuple, but the first one represents the forward velocity while the second one represents the steering angle.
+Be careful here as the definition of the actions in the README of the duckietown original repository is describing actions differently.
+It also defines a two-elements tuple, but the first digit represents the forward velocity while the second one represents the steering angle.
 This definition is more natural to manually control the robot.
-A wrapper (DuckietownEnv) exists to switch from the control of wheels velocity to the control of forward velocity and streering.
-However, we chose not to use this wrapper and to keep the default implementation.
-The code contains some inconsistencies without the wrapper, which will be described later.
+A wrapper (DuckietownEnv) exists to switch from the wheels velocity control to the forward velocity and streering angle control.
+
+However, this wrapper is not used in this project and the default implementation is kept.
+The original code contains some inconsistencies without the wrapper, which will be described later.
 
 \section{Transitions}
 The transitions of a MDP is the distribution $P(s'| s, a)$, i.e. the probability of ending up in the state $s'$ if the agent is in the state s and take the action a.
 This is typically a point where the transfer from the simulator to the robot may be harmful.
 
-Indeed, the transitions in the simulator can be considered as "perfect", the position of the robot in state $s'$ is computed from the position in state $s$ using the velocities stated by action $a$.
+Indeed, the transitions in the simulator can be considered as "perfect", as the position of the robot in state $s'$ is computed from the position in state $s$ using the velocities stated by action $a$.
 This is not fully deterministic, as some objects (such as duckie pedestrians) may have a stochastic behaviour, but the updated position is a deterministic function of the previous position and current action.
 
 However, in the real world, the transitions between the positions are not perfect.
 Given a position and an action, the next position is not deterministic.
-It can slightly vary because of mechanical links not being perfect, because of unusual road surface...
+It can slightly vary because of mechanical links not being perfect, because of unusual road surface, etc.
+
 This shift in the transition distribution is one of the problem we will have to address during the simulation to reality transfer.
 
 \section{Reward}
@@ -62,17 +64,14 @@ This reward function has presented several issues:
     \item The penalties (collision and distance) are so strong that the agent usually much prefers to go around in circles at max speed at the center of the lane than to actually follow it.
 \end{enumerate}
 
-To face this issues, a minimalist reward function has been used :
-\begin{equation}
-    R =
-    \begin{cases}
-        speed, & \text{if}\ dist \leq d\\
-        -1, & \text{otherwise}
-    \end{cases}
-\end{equation}
-Where $d$ is a constant defining a minimal distance to the center of the line, over which we consider the robot should be penalised. We used a value $d=0.1\ m$.
 
 The design of the reward function will condition the performance of our agent in the simulator.
 This reward will be used to train a policy, i.e. a mapping from a state $s$ to an action $a$ to take.
 This policy will need to be adapted before transfer to the real world.
 However, the reward does not need to be adapted.
+
+\section{Policy}
+A policy $\Pi$ associates to each state a distribution of probability over the actions, which is used to select the action to take.
+The training of the agent aims at finding a policy selecting the action which maximize the reward from each state.
+Such policy is named optimal.
+A deterministic optimal policy is supposed to exist, and thus the policy will be searched as a mapping from the states space to the action space.

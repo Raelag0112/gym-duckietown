@@ -1,43 +1,135 @@
-\chapter{Reinforcement Learning Training}%
+\chapter{Reinforcement Learning Training}
 
-\section{Training Scipt}%
+The environment implements the gym API, especially the reset, step and render functions which makes it easy to implement RL algorithms, or to use existing libraries.
 
-The learning is performed using the train\_reinforcement.py script in the learning/reiforcement/pytorch directory.
-In order to execute it, change into the directory ./learning and run :
+The branch master of the repository\cite{forked_gym_duckietown} contains the original reinforcement learning implementation from Duckietown, while the branch develop contains our tweaked implementation.
+This chapter provides an overview of the original implementation as well as details of the choices that have been made to increase learning performances.
+
+\section{Training Scipt}
+
+The learning is performed using the \path{train_reinforcement.py} script in the \path{learning/reiforcement/pytorch} directory.
+It should be executed as a module from the \textit{learning} folder:
 
 \begin{lstlisting}{laguage=bash}
+    cd learning
     python -m reinforcement.pytorch.train_reinforcement
 \end{lstlisting}
 
-If an error is returned stating that a module doesn't exist, check if PYTHONPATH variable contains the repository root folder.
+If an error is returned stating that gym-duckietown module doesn't exist, check if the PYTHONPATH environment variable contains the project root folder.
 
 \begin{lstlisting}{laguage=bash}
     echo $PYTHONPATH
 \end{lstlisting}
 
-If it doesn't, get back to the root directory of the project and run:
+If it doesn't:
+\begin{enumerate}
+    \item On Linux/Mac OS:
+        Get back to the root directory of the project and add it to the PYTHONPATH:
+        \begin{lstlisting}{laguage=bash}
+            cd ../
+            export PYTHONPATH="${PYTHONPATH}:`pwd`"
+        \end{lstlisting}
+    \item On Windows:
+% TODO add windows instructions
 
-\begin{lstlisting}{laguage=bash}
-    cd ../
-    export PYTHONPATH="${PYTHONPATH}:`pwd`"
-\end{lstlisting}
+\end{enumerate}
 
-The training can be tweaked by passing some hyperparameters when executing train\_reinforcement.
-A list of this parameters can be accessed by running :
+The training can be tweaked by passing some hyperparameters when executing the train\_reinforcement module.
+A list of this parameters can be accessed by running:
 
 \begin{lstlisting}{language=bash}
     python -m reinforcement.pytorch.train_reinforcement --h
 \end{lstlisting}
 
-\section{Policy}%
+\section{Training Algorithm}
 
-The policy can be tweaked through the "--policy" argument, accepting as a string the name of the policy to use to train the agent.
-Currently available values are ddpg\cite{ddpg} and td3\cite{td3}, ddpg being the default.
+The original training algorithm implemented by duckietown is ddpg\cite{ddpg}.
+To improve learning speed and stability, a td3\cite{td3} algorithm has been implemented.
 
-The policies are defined in their own files (e.g. ddpg.py and td3.py).
-The implementation is decoupled from the architecture of actors and critic, which are defined in actor.py and critic.py
+The algorithm can be specified through the \lstinline[language=bash]+--policy+ argument, accepting as a string the name of the algorithm to use to train the agent.
+Currently available values are ddpg and td3, ddpg being the default.
 
-Among these paramters, you can notice the "--per" parameter, which can be used to use a Prioritize Experience Replay buffer.
-It is for now functional with the ddpg algorithm, \textbf{not with the td3}.
+The policies are defined in their own files (e.g. \path{ddpg.py} and \path{td3.py}).
+
+\section{Prioritize Experience Replay}%
+
+A Prioritize Experience Replay\cite{per} has been implemented.
+It can be used in training script using the \lstinline[language=bash]+--per+ parameter.
+It is for now effective with the ddpg algorithm, \textbf{not with the td3}.
+
+\section{Wrappers}
+To improve the performances of the learning, wrappers can be used to tweak the environment without editing its code.
+Wrappers implements the Adapter/Wrapper pattern\footnote{\url{https://en.wikipedia.org/wiki/Adapter_pattern}}.
+They are subclasses of gym wrapper classes RewardWrapper, ObservationWrapper and ActionWrapper.
+They are instanciated specifying the environment to be wrapped as a constructor parameter.
+
+Let's detail the reward wrapper implementation as an example to review wrappers principle.
+The reward wrapper intercepts the result of the step function, and replace the value of reward with a custom reward function.
+Figure \ref{fig:rewardwrappers} is a sequence diagram showing how a RewardWrapper interacts with a client class.
+
+\begin{figure}
+    \begin{sequencediagram}
+        \newthread{t}{Client}
+        \newinst[1]{w}{RewardWrapper}
+        \newinst[2]{s}{Simulator}
+        \begin{call}{t}{step()}{w}{\shortstack{
+                    return obs, \\ reward(reward) \\
+            done, \\ info }}
 
 
+            \begin{call}{w}{step()}{s}{\shortstack{
+                        return obs, \\ reward, \\
+                done, \\ info }}
+                \postlevel
+                \postlevel
+                \postlevel
+            \end{call}
+            \postlevel
+            \postlevel
+            \postlevel
+        \end{call}
+    \end{sequencediagram}
+
+    \caption{RewardWrapper Sequence Diagram}
+    \label{fig:rewardwrappers}
+\end{figure}
+
+ObservationWrapper can be used by overriding the observation(observation) function and ActionWrapper by overriding the action(action) function.
+Wrappers contain the original environment as attribute, and can thus access any information from the context.
+
+This section presents the wrappers that have been used for the training of this project.
+Wrappers are defined in the \path{learning/utils/wrappers.py} class.
+
+\subsection{Observation Wrappers}
+The orginal state space is $S = \{ 0, 255 \}^{640x480x3}$.
+This is a very heavy state, especially if we use neural networks to predict the actions from the state.
+Thus, the 640x480 pixels are resized to 80x60 pixels and are converted to grayscale images.
+This transforms the state space from $S = \{ 0, 255 \}^{640x480x3}$ to $S = \{ 0, 255 \}^{80x60}$.
+
+In order for the robot to have access to informations about its speed and acceleration, 4 observations are stacked into a state.
+Thus, the state space is now $S = \{ 0, 255 \}^{80x60x4}$.
+
+Finally, the observations are normalized to [0, 1], resulting in a $[0, 1]^{80x60x4} space$.
+
+\subsection{Reward Wrapper}
+
+% TODO add ref to reward chapter 1
+As stated in the first chapter, the original reward function was not really effective during tests.
+
+To try to improve performances, a minimalist reward function has been tested:
+\begin{equation}
+    R =
+    \begin{cases}
+        speed, & \text{if}\ dist \leq d\\
+        -1, & \text{otherwise}
+    \end{cases}
+\end{equation}
+Where $d$ is a constant defining a minimal distance to the center of the line, over which we consider the robot should be penalised. We used a value $d=0.1\ m$.
+
+The implementation is decoupled from the architecture of actors and critics network, which are defined in \path{actor.py} and \path{critic.py} in the folder \path{learning/reinforcement/pytorch/}.
+
+\section{Actor and Critic}%
+
+@Oliv
+Tu peux citer \cite{actorcritic} comme reference.
+% TODO actor critic
