@@ -1,0 +1,25 @@
+\chapter*{Introduction}
+
+Reinforcement Rearning (RL) is an area of machine learning based on trial and error.
+The goal is for an agent to learn an optimal behaviour and adapt its comportement, based on experience, in a given environment.
+Reinforcement Learning has been very successful in the last few years, notably for its great performance in games (e.g. AlphaGo \cite{rlgames}).
+However, it suffers from a lack of industrial applications.
+
+One of the reason for this is that an agent needs a lot of experience in order to learn a reasonable behaviour.
+Those learning experiences must be run in a simulator for safety, speed and financial reasons.
+The transfer of behaviour from the simulated agent to the real world (for example an autonomous vehicle) is far from being trivial.
+Even for high quality simulators, there is a shift in both states and transitions spaces between the simulator and the real world.
+
+The goal of this project is to study different methods to robustly train an autonomous car in a simulator via RL, in order for the real-world agent to behave as suited.
+
+All the project experiments will be based on Duckietown\footnote{\url{https://www.duckietown.org/}} resources.
+The Duckietown fundation is a non-profit foundation providing tools dedicated to education and research in the fields of AI and robotics.
+In particular, it provides a gym-based simulator (gym-duckietown), a robot (Duckiebot) and a real world environment (Duckietown).
+
+This document aims at providing an understanding of the basic concepts required to start working on Duckietown environments.
+
+% TODO Developement plan
+% TODO Bibtex github
+
+A fork of the gym-duckietown repository\cite{gym_duckietown} is dedicated to this project\cite{forked_gym_duckietown}.
+The latest version of this manual can be found on the branch documentation.

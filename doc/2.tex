@@ -1,0 +1,274 @@
+\chapter{Gym-DuckieTown Simulator}
+
+From the README.md in the official github repository \cite{gym_duckietown}, here is an introduction to Gym-Duckietown.
+
+ \begin{quotation}
+    Gym-Duckietown is a simulator for the Duckietown Universe, written in pure Python/OpenGL (Pyglet). It puts the agent, a Duckiebot, inside of an instance of a Duckietown: a loop of roads with turns, intersections, obstacles, Duckie pedestrians, and other Duckiebots. It can be a pretty hectic place!
+\end{quotation}
+
+ This chapter provides a guide through installation, usage and architecture of the simulator.
+
+\section{Installation}
+
+The installation is pretty straight-forward from the source code. Use the following commands :
+
+\begin{lstlisting}[language=bash]
+    git clone https://github.com/vcoyette/gym-duckietown
+    cd gym-duckietown
+    conda env create -f environment.yaml
+\end{lstlisting}
+
+The installation has been tested on Windows, Linux and MacOS. Some problems may be encountered for the installation of certain packages.
+They can be resolved with package-specific installation instructions.
+For example, the installation of pyglet may raise an issue.
+It can be resolved by installing it from the pyglet github repository.
+
+To use the simulator, the environment must be activated (on linux) :
+
+\begin{lstlisting}[language=bash]
+    source activate gym-duckietown
+\end{lstlisting}
+
+And the root folder of the project must be added to the PYTHONPATH environment variable.
+
+On linux :
+\begin{lstlisting}[language=bash]
+    export PYTHONPATH="${PYTHONPATH}:`pwd`"
+\end{lstlisting}
+
+On Windows, environment variable can be accessed in windows advanced parameters. You can then append the path of your project folder to the PYTHONPATH variable if it exists, or create it otherwise.
+
+\section{Manual Control}
+A UI application can be launched to manually control the robot.
+Actions can be sent from the keyboard arrows, and images from the simulated DuckieBot camera are displayed.
+Here is a simple command to launch the application :
+
+\begin{lstlisting}{laguage=bash}
+    ./manual_control.py --env-name Duckietown-udem1-v0
+\end{lstlisting}
+
+The map can be specified through the \lstinline[language=bash]+"--map-name"+ environment.
+
+\subsection{Keyboard}
+Here is a list of keys which can be used during the simulation.
+
+\begin{itemize}
+	\item Escape : exit simulation
+	\item Backspace : restart simulation
+	\item Directional keys: go forward, backward or turn
+	\item Shift : boost speed
+\end{itemize}
+
+\subsection{Logs}
+The project repository\cite{forked_gym_duckietown} contains a branch "experiment".
+This branch is supposed to be used to do any experiment on the simulator.
+The main difference from a classical "develop" branch is that it does not aim at being merged into the master branch.
+
+This branch contains a logger for the manual control application.
+At each time step, this logger will log the current position of the agent, the current speed, the current distance from the lane, the action took and the reward value.
+The goal is to manually control the agent so that it behaves as expected.
+The logs can then be used to improve the design of the reward function for example.
+
+To enable this option, pass the \lstinline[language=bash]+--output+ option to \path{manual\_control.py}.
+You can optionally specify another option \lstinline[language=bash]+--filename example.csv+ to specify the name of the output file, which would be \path{data/example.csv}.
+If no file-name is specified, the logs will be stored in \path{data/manual\_controli.csv}, where $i$ is the first number for which this path is free.
+
+When the episode is done, the manual control must be exited by pressing the S key to save the output.
+
+
+\section{Create Maps}
+You can very easily create a new \textbf{Duckietown} environment with a text editor.
+A Duckietown's map is a \textit{.yaml} file, so you have to save your new map in the folder \path{maps} as "\path{my_new_map.yaml}" (the path should looks like this one: \path{./gym-duckietown-master/gym_duckietown/maps}).
+
+If you want to see your map, you can use the following line in the terminal:
+
+\begin{lstlisting}{language=bash}
+    ./manual_control.py --env-name Duckietown-udem1-v0
+    --map-name my_new_map
+\end{lstlisting}
+
+\noindent Your robot will be manually controlled in your map.
+
+\noindent A grassroots level of your \textit{.yaml} should looks like this :
+
+\begin{center}
+    \line(1,0){400}
+\end{center}
+\noindent tiles:
+
+\noindent- [floor, floor, floor, grass, grass, grass, floor, floor]\newline
+- [floor, floor, grass, grass, straight/S, grass, floor, floor]\newline
+- [floor, grass, grass, curve\_left/W, curve\_right/S, grass, floor, floor]\newline
+- [grass, grass, curve\_left/W, curve\_right/S, grass, grass, floor, floor]\newline
+- [grass, curve\_left/W, curve\_right/S, grass, grass, floor, floor, floor]\newline
+- [grass, curve\_left/S, curve\_right/E, grass, grass, floor, floor, floor]\newline
+- [grass, grass, curve\_left/S, curve\_right/E, grass, floor, floor, floor]\newline
+- [floor, grass, curve\_left/W ,curve\_right/S, grass, floor, floor, floor]\newline
+- [floor, grass, straight/S, grass, grass, floor, floor, floor]\newline
+- [floor, grass, grass, grass, floor, floor, floor, floor]\newline
+- [floor, floor, floor, floor, floor, floor, floor, floor]
+
+\noindent objects:
+
+\noindent- kind: house\newline
+  pos: [4.5, 9.1]\newline
+  rotate: 90\newline
+  height: 0.5
+
+\noindent- kind: tree\newline
+  pos: [1, 1]\newline
+  rotate: 0\newline
+  height: 0.5
+
+\noindent- kind: tree\newline
+  pos: [2, 8.5]\newline
+  rotate: 90\newline
+  height: 0.3
+
+\noindent tile\_size: 0.585
+\begin{center}
+    \line(1,0){400}
+\end{center}
+
+For each line, the number of tiles has to remain the same.
+The \textbf{tile\_size} and the \textbf{height} of every object can change, but insofar as your goal is to transpose the simulation to the real world, you must not change their values.
+If so, you should have \textbf{tile\_size}$=0.585$ (for the conventional heights of the objects will be given below).
+
+You can find your way in the map knowing that going upward is going North, and knowing that when you drive on a road tile, the name of the road tile tells you which direction you were facing when you arrived on it, and by which direction you will leave the tile.
+Let's give an example : the tile "\textit{curve\_left/W}" means that you arrived on it while you were moving West, and the fact that you'll turn left on it says you are going to leave the tile by the South (it's of course reversible, you can arrive from South facing North, and leave to the East).
+You can also know your position $(x,\ y)\in\mathbb{R}^2$ on the map (this is the way you put objects on it).
+The point $[0,\ 0]$ matches the upper left corner of the upper left tile of the map (so the coordinates start at the very North/West).
+The coordinates keep going higher as you move toward South/East, increasing of 1 each time you go through one tile.
+
+Here is the list of the tiles you can use to build your map:
+\begin{itemize}
+    \item straight
+    \item curve\_left
+    \item curve\_right
+    \item 3way\_left (3-way intersection)
+    \item 3way\_right
+    \item 4way (4-way intersection)
+    \item asphalt
+    \item grass
+    \item floor (office floor)
+\end{itemize}
+
+You can (and should) orientate the roads (the six first tiles on the list) by adding "/N", "/E", "/S", "/W" (this will be oriented according to the rule given above).
+
+The objects can be added as shown in the following example (changing the name of the object). Here is a list of them :
+
+\begin{itemize}
+    \item barrier (height : 0.08)
+    \item cone (height : 0.08)
+    \item duckie (height : as you wish between 0.06 and 0.08)
+    \item duckiebot (height : 0.12)
+    \item tree (height : as you wish between 0.1 and 0.9)
+    \item house (height : 0.5)
+    \item truck (height : 0.25)
+    \item bus (height : 0.18)
+    \item building (height : 0.6)
+    \item sign\_stop, sign\_T\_intersect, sign\_yield, etc... (height : $0.18$ for the signs, $0.4$ for a traffic light)
+\end{itemize}
+
+There are many other signs, you can check the whole list here :
+\url{https://github.com/duckietown/gym-duckietown/blob/master/gym\_duckietown/meshes}
+
+It is possible to add the attributes :
+
+\begin{itemize}
+    \item optional: True or False (makes the object optional)
+    \item static: True or False (for the Duckiebot for example if you want to see them move)
+\end{itemize}
+
+To go any further about map creation, check the Github of Duckietown on this link : \footnote{$https://github.com/vcoyette/gym-duckietown/tree/documentation$ }
+
+\section{Domain randomization}
+
+When it comes to transfer knowledge from simulation to reality, a problem which may be face is the images collected from simulation diverging too much from reality.
+Often, people even retrain their model from scratch when moving to the physical world.
+
+One solution to this problem is domain randomization.
+The idea is to perturb the dynamics or look of the simulator such as colors, textures, horizon...
+This achieves a more variable dataset and better generalization, which is beneficial for transfer to the real robot.
+This section will deal with domain randomization in gym-duckietown environments.
+
+\subsection{The randomisation API}
+
+The folder \path{gym_duckietown/randomization} contains the domain randomization API.
+This API contains all of the pre-packaged methods for randomization within gym-duckietown, which will be listed here.
+This folder also contains a readme file detailing the API.
+
+The domain randomization is driven by the Randomizer class, which takes as input a configuration file and outputs (upon call to randomize) a set of settings used by the Simulator class (the core class of gym\-duckietown managing the environment).
+To activate any domain randomization at all, the simulator class must have domain\_rand = true passed as a parameter to its constructor.
+
+If a randomizable variable is not found in the configuration file, it will be randomized according to the default values found in \url{gym-duckietown/gym_duckietown/randomization/config/default.json}.
+Three types of distribution are supported, int, uniform and normal. 4 variables are randomizable by default:
+\begin{enumerate}
+    \item horz\_mode: The task is made harder by making the horizon more similar to the road. It can take integer values from 0 to 3 where:
+        \begin{itemize}
+            \item 0: Sets the skybox to a blue sky, the default
+            \item 1: Sets the skybox to a gray wall, intended to be similar to room testing conditions
+            \item 2: Sets the skybox to a dark gray box
+            \item 3: Sets the skybox to a light gray box
+        \end{itemize}
+    \item light\_pos: Makes the simulator more or less iluminated, by changing the position of the single light source.
+    \item camera\_noise: Adds noise to the camera position for data augmentation purposes. This noise is applied at each render, giving the screen input a "twitchy" behaviour.
+    \item frame\_skip: No info provided. Code inspection shows this is the number of frames to skip per action. Higher frameskip makes the agent able to act less frequently.
+\end{enumerate}
+
+The API is sorely lacking in the amount of variables that can be randomized.
+It provides some flexibility in randomization of the input, but it provides no randomization besides frame\_skip of transitions and/or actions.
+
+\subsection{Non API Randomisation}
+
+Code inspection reveals that more randomisation occurs, contingent on domain-rand being activated.
+\begin{enumerate}
+    \item Within Simulator.py: All calls to \_perturb(val,scale) distort the value passed as argument if and only if domain rand is true, otherwise they return it undisturbed. The distortion is a multiplicative \% error drawn uniformly between $1 - scale$ and $1 + scale$, with a default of $scale = 0.1$ (e.g. by default values are randomised between 90 and 110\%). The function is called on:
+        \begin{itemize}
+            \item horizon\_color, beyond the randomization introduced by horz\_mode. 10\% for blue\_sky and wall\_color sky (modes 1 and 2), 40\% for modes 3 (dark gray) and 4 (clear gray)
+            \item glLight function : sets the values of individual light source parameters, making the environment more or less iluminated. It modifies the light position, the ambient and diffusion of light.
+            \item ground\_color, 30\%
+            \item wheel\_dist, 10\%
+            \item cam\_height, 8\%
+            \item cam\_angle, 20\%
+            \item cam\_fov\_y, 20\%, camera field of view
+                side length of the ground/noise triangles generated as distractors (which themselves are generated randomly in the first place? Seems redundant to do it twice), 10\%
+            \item tile color, 20\% for each tile
+            \item object color, 20\% for each color
+            \item CAMERA\_FORWARD\_DIST of gl.glTranslatef on line 1434, 10\%
+            \item The actual tile texture loaded is randomised with randint amongst all possible candidates
+            \item Some optional objects are invisible, 33\% chance
+        \end{itemize}
+    \item Within objects.py
+        \begin{itemize}
+            \item DuckiebotObj (Cars)
+                \begin{itemize}
+                    \item follow\_dist is randomised from 0.3 to a uniform between 0.3 and 0.4
+                    \item velocity is randomised from 0.1 to a uniform between 0.05 and 0.15
+                \end{itemize}
+            \item DuckieObj (Pedestrians)
+                \begin{itemize}
+                    \item pedestrian\_wait\_time randomised from 8 to a randint from 3 to 20, takes on new random value on same range when finish crossing street
+                    \item vel randomised from 0.02 to a normal with avg 0.02 and stdev 0.005, takes on new random value on same range when finish crossing street
+                \end{itemize}
+            \item TrafficLightObj
+                \begin{itemize}
+                    \item freq is randomised from 5 with randint(4,7)
+                    \item The lights start randomly from off as either On or Off, 50\% chance each
+                \end{itemize}
+        \end{itemize}
+\end{enumerate}
+
+
+\subsection{Randomizing inputs}
+
+
+Randomizing inputs can be accomplished via the API. Other possible sources of randomization are:
+\begin{itemize}
+    \item Changing hue of key elements: stop signs, road… Might be hard since they’re all texture based. A possible approach: Generating variations on existing textures: Automatically generate X diff textures with some other software from existing textures passed through some filters, then use the in-built texture randomiser
+    \item Adding noise to the camera acquisition (not position)? This is similar to randomising the color of the sky and objects themselves so it might not be interesting. However camera noise provides variations during a single episode or each timestep which may imitate real camera noise (or not?)
+    \item Approaching photorrealism in some way can be helpful in improving the performance (Johnson-Robertson et al.) May prove unfeasible given the simulator and available time and resources
+    \item Addding additional light sources?
+    \item Gaussian noise foreground of images and edge blurring through gaussian noise at edges on input images is also helpful (Hinterstoisser et al.) The technique can be extended to other blending techniques (Dwibedi et al.)
+\end{itemize}
+

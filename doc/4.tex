@@ -1,0 +1,58 @@
+\chapter{Transfer to the Duckiebot}
+
+\section{Assembly and operation of the duckiebot}
+
+For the most part we recommend following the duckiebot operating manual at \url{https://docs.duckietown.org/DT19/opmanual\_duckiebot/out/index.html}.
+The guide provides a step by step process on how to succesfully assemble, boot, and operate the duckiebot.
+
+While the guide is helpful, Section D does not provide help on how to troubleshoot many of the issues that can appear during boot. In this section we provide information on how to deal with the problems we faced However we recommend heading to the duckietown slack community over at \url{duckietown.slack.com}, which as is very active as of March 2020 and proved invaluable to us. Their considerable expertise and willingness to help can aid you in troubleshooting your issues.
+
+\subsection{Assembly of the duckiebot}
+
+Note: We strongly recommend flashing the SD card and performing the first boot before mounting the Raspberry Pi on the duckiebot. Connect a monitor and/or a keyboard to the raspberry pi to aid you in this procedure, otherwise your sole source of information on the boot process will be the red and green LED lights, until you are able to connect the bot to the local network and ssh into it. After mounting the raspberry PI, the HDMI and keyboard input ports will be rendered inaccessible.
+
+\subsubsection{Inserting and extracting the SD card after mounting the Raspberry PI}
+
+Mounting will render the SD card port of the Raspberry PI hard to access. We recommend using a set of calipers to access the SD card and insert or extract it.
+
+
+\subsection{Flashing the SD Card and booting the Raspberry Pi}
+
+daffy is the experimental version. It contains numerous duckietown shell commands available for it exclusivel, that can simplify troubleshooting significantly. dts-19 is the last stable build, although it is comparatively lacking in capabilities.
+
+Here are some of the issues that we've encountered upon setting up the duckiebot and how to solve them
+
+\subsubsection{Booting the Raspberry PI before assembly}
+
+The first boot process of raspberry PI is often faulty. As mentioned at the beginning of the section, to ease troubleshooting, we recommend performing this process BEFORE mounting the Raspberry PI onto the duckiebot to make the procedure easier to follow
+\subsubsection{Interpreting the LED lights}
+The duckiebot operating manual mentions that the following pattern is to be observed during a successful boot of the duckiebot:
+
+\begin{enumerate}
+    \item Stable red LED light and intermittent green LED light
+    \item Alternating red and green LED lights
+    \item Persistent green LED light - The process succeeded
+    \item A persistent red LED light means the process failed somehow
+\end{enumerate}
+
+The guide does not explain properly that this process is ONLY to happen during the FIRST boot of the raspberry PI. Subsequent boots will have the red LED light lit permanently whereas the green LED light just marks activity on the SD port. Do not be alarmed by this.
+
+\subsubsection{Failed boot procedure - containers missing}
+
+Very often (100\% of the time so far), the boot procedure will fail silently - several of the required packages will fail to be installed with no apparent error message during the flashing procedure or on the duckiebot's health logs. Should that be the case, we recommend that you try to download these containers individually from docker and set them up yourself. The specifics of this process vary case by case. The only alternative is to reflash the SD card and reboot the Raspberry Pi, a time-consuming procedure with low success probabilities.
+
+ATTACH IMAGE OF ALL CONTAINERS NEEDED FOR REGULAR OPERATIONS
+
+\subsection{Loading an agent}
+
+TO BE COMPLETED
+
+\subsection{Calibrating the camera}
+
+TO BE COMPLETED
+
+\subsection{Calibrating the wheels}
+
+TO BE COMPLETED
+
+\end{document}
