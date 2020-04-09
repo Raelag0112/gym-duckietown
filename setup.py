@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 def get_version(filename):
@@ -22,6 +22,8 @@ setup(
         name='gym_duckietown',
         version=version,
         keywords='duckietown, environment, agent, rl, openaigym, openai-gym, gym',
+        packages=['gym_duckietown'],
+        include_package_data=True,
         install_requires=[
             'gym>=0.9.0',
             'numpy>=1.10.0',
@@ -31,7 +33,7 @@ setup(
             'opencv-python>=3.4',
             'pyyaml>=3.11',
             'cloudpickle',
-            'duckietown_slimremote>=2018.8.2', 
+            'duckietown_slimremote>=2018.8.2',
             'pygeometry',
             'dataclasses'
         ],
