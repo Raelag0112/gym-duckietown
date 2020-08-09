@@ -9,22 +9,34 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 
 ### Added test import
-#from reinforcement.pytorch.ddpg_per import DDPG_PER
+# from reinforcement.pytorch.ddpg_per import DDPG_PER
 
 # Duckietown Specific
 from reinforcement.pytorch.ddpg import DDPG
 from reinforcement.pytorch.td3 import TD3
-from reinforcement.pytorch.utils import seed, evaluate_policy, ReplayBuffer, PrioritizedReplayBuffer
+from reinforcement.pytorch.utils import (
+    seed,
+    evaluate_policy,
+    ReplayBuffer,
+    PrioritizedReplayBuffer,
+)
 from utils.env import launch_env
-from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
-    DtRewardWrapper, ActionWrapper, ResizeWrapper
+from utils.wrappers import (
+    NormalizeWrapper,
+    GrayscaleWrapper,
+    ImgWrapper,
+    DtRewardWrapper,
+    ActionWrapper,
+    ResizeWrapper,
+)
 from gym.wrappers import FrameStack
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 # Available policies
-policies = {'ddpg': DDPG, 'td3': TD3}
+policies = {"ddpg": DDPG, "td3": TD3}
+
 
 def _train(args):
     if not os.path.exists("./results"):
@@ -60,29 +72,35 @@ def _train(args):
     env_counter = 0
     reward = 0
     episode_timesteps = 0
-    
+
     avg_episodes = 100
-    
+
     # Keep track of the best reward over time
     best_reward = -np.inf
 
-    #Keep track of train_rewards
+    # Keep track of train_rewards
     train_rewards = []
-    
-    #To print mean actions per episode
+
+    # To print mean actions per episode
     mean_action = []
-    
-    #To keep track of moving averages
+
+    # To keep track of moving averages
     moving_avgs = []
 
-    #Summary writer for tensorboard
-    writer = SummaryWriter(log_dir='reinforcement/pytorch/runs')
+    # Summary writer for tensorboard
+    writer = SummaryWriter(log_dir="reinforcement/pytorch/runs")
 
     # Initialize policy
     if args.policy not in policies:
-        raise ValueError("Policy {} is not available, chose one of : {}".format(args.policy, list(policies.keys())))
+        raise ValueError(
+            "Policy {} is not available, chose one of : {}".format(
+                args.policy, list(policies.keys())
+            )
+        )
 
-    policy = policies[args.policy](state_dim, action_dim, max_action, args.per, args.gradclip)
+    policy = policies[args.policy](
+        state_dim, action_dim, max_action, args.per, args.gradclip
+    )
 
     # Evaluate untrained policy
     evaluations = [evaluate_policy(env, policy)]
@@ -92,26 +110,34 @@ def _train(args):
 
     ## Initialize ReplayBuffer
     if args.per:
-        print('Training with Prioritized Experience Reply')
-        replay_buffer = PrioritizedReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed, initial_beta=0.5, delta_beta=2/args.max_timesteps)
+        print("Training with Prioritized Experience Reply")
+        replay_buffer = PrioritizedReplayBuffer(
+            args.replay_buffer_max_size,
+            args.batch_size,
+            args.seed,
+            initial_beta=0.5,
+            delta_beta=2 / args.max_timesteps,
+        )
     else:
-        replay_buffer = ReplayBuffer(args.replay_buffer_max_size, args.batch_size, args.seed)
+        replay_buffer = ReplayBuffer(
+            args.replay_buffer_max_size, args.batch_size, args.seed
+        )
 
     # Load previous policy
     if args.load_initial_policy:
 
         # Disable random start steps
-        args.start_timesteps=0
+        args.start_timesteps = 0
 
         # Load training data
         checkpoint = load_training_state(args.model_dir, args.policy + "_training")
 
-        evaluations = checkpoint['evaluations']
-        total_timesteps = checkpoint['total_timesteps']
-        train_rewards = checkpoint['train_rewards']
-        episode_num = checkpoint['episode_num']
-        best_reward = checkpoint['best_reward']
-        moving_avgs = checkpoint['moving_avgs']
+        evaluations = checkpoint["evaluations"]
+        total_timesteps = checkpoint["total_timesteps"]
+        train_rewards = checkpoint["train_rewards"]
+        episode_num = checkpoint["episode_num"]
+        best_reward = checkpoint["best_reward"]
+        moving_avgs = checkpoint["moving_avgs"]
 
         # Load policy
         policy.load(args.model_dir, args.policy)
@@ -127,8 +153,10 @@ def _train(args):
             action = env.action_space.sample()
         else:
             action = policy.predict(np.array(obs))
-            action = add_noise(action, args.expl_noise, env.action_space.low, env.action_space.high)
-            
+            action = add_noise(
+                action, args.expl_noise, env.action_space.low, env.action_space.high
+            )
+
         mean_action.append(action)
 
         # Perform action
@@ -154,17 +182,31 @@ def _train(args):
             done = True
 
         if done:
-            print(("Total T: %d Episode Num: %d \nMean actions: %.2f %.2f Episode T: %d Reward: %.1f Moving Average: %.1f") % (
-              total_timesteps, episode_num, np.mean(np.array(mean_action), axis=0)[0], np.mean(np.array(mean_action), axis=0)[1], episode_timesteps, episode_reward, moving_avgs[-1]))
+            print(
+                (
+                    "Total T: %d Episode Num: %d \nMean actions: %.2f %.2f Episode T: %d Reward: %.1f Moving Average: %.1f"
+                )
+                % (
+                    total_timesteps,
+                    episode_num,
+                    np.mean(np.array(mean_action), axis=0)[0],
+                    np.mean(np.array(mean_action), axis=0)[1],
+                    episode_timesteps,
+                    episode_reward,
+                    moving_avgs[-1],
+                )
+            )
 
             train_rewards.append(episode_reward)
-            moving_avgs.append(moving_average(train_rewards,avg_episodes))
+            moving_avgs.append(moving_average(train_rewards, avg_episodes))
 
             writer.add_scalar("Timesteps/Rewards", episode_reward, total_timesteps)
-            writer.add_scalar("Timesteps/MovingAverage", moving_avgs[-1], total_timesteps)
-            #writer.add_scalar("Episode/Wheel1Mean", np.mean(np.array(mean_action), axis=0)[0], episode_num)
-            #writer.add_scalar("Episode/Wheel2Mean", np.mean(np.array(mean_action), axis=0)[1], episode_num)
-            
+            writer.add_scalar(
+                "Timesteps/MovingAverage", moving_avgs[-1], total_timesteps
+            )
+            # writer.add_scalar("Episode/Wheel1Mean", np.mean(np.array(mean_action), axis=0)[0], episode_num)
+            # writer.add_scalar("Episode/Wheel2Mean", np.mean(np.array(mean_action), axis=0)[1], episode_num)
+
             # Evaluate episode
             if timesteps_since_eval >= args.eval_freq:
 
@@ -172,24 +214,57 @@ def _train(args):
                 eval_reward = evaluate_policy(env, policy)
                 evaluations.append(eval_reward)
 
-                writer.add_scalar("Timesteps/EvaluationReward", eval_reward, total_timesteps)
+                writer.add_scalar(
+                    "Timesteps/EvaluationReward", eval_reward, total_timesteps
+                )
 
-                print("\n-+-+-+-+-+-+-+-+-+-+ Evaluation reward at time {}: {} +-+-+-+-+-+-+-+-+-+-".format(total_timesteps, eval_reward))
+                print(
+                    "\n-+-+-+-+-+-+-+-+-+-+ Evaluation reward at time {}: {} +-+-+-+-+-+-+-+-+-+-".format(
+                        total_timesteps, eval_reward
+                    )
+                )
 
-                np.savetxt("reinforcement/pytorch/results/eval_rewards_" + args.policy + ".csv", np.array(evaluations), delimiter=",")
-                np.savetxt("reinforcement/pytorch/results/train_rewards_" + args.policy + ".csv", np.array(train_rewards), delimiter=",")
-                np.savetxt("reinforcement/pytorch/results/moving_averages_" + args.policy + ".csv", np.array(moving_avgs), delimiter=",")
+                np.savetxt(
+                    "reinforcement/pytorch/results/eval_rewards_"
+                    + args.policy
+                    + ".csv",
+                    np.array(evaluations),
+                    delimiter=",",
+                )
+                np.savetxt(
+                    "reinforcement/pytorch/results/train_rewards_"
+                    + args.policy
+                    + ".csv",
+                    np.array(train_rewards),
+                    delimiter=",",
+                )
+                np.savetxt(
+                    "reinforcement/pytorch/results/moving_averages_"
+                    + args.policy
+                    + ".csv",
+                    np.array(moving_avgs),
+                    delimiter=",",
+                )
 
                 # Save the policy according to the best reward over training
                 if eval_reward > best_reward:
                     best_reward = eval_reward
                     policy.save(args.model_dir, args.policy)
-                    save_training_state(args.model_dir, args.policy + "_training", best_reward, total_timesteps, evaluations, train_rewards, episode_num, moving_avgs)
+                    save_training_state(
+                        args.model_dir,
+                        args.policy + "_training",
+                        best_reward,
+                        total_timesteps,
+                        evaluations,
+                        train_rewards,
+                        episode_num,
+                        moving_avgs,
+                    )
 
-                    print('-+-+-+-+-+-+-+-+-+-+ Model saved +-+-+-+-+-+-+-+-+-+-\n')
+                    print("-+-+-+-+-+-+-+-+-+-+ Model saved +-+-+-+-+-+-+-+-+-+-\n")
 
             # Reset environment
-            mean_action =  []
+            mean_action = []
 
             obs = env.reset()
             env_counter += 1
@@ -197,62 +272,108 @@ def _train(args):
             episode_timesteps = 0
             episode_num += 1
 
-
     print("Finished..should return now!")
+
 
 def add_noise(action, expl_noise, low, high):
     if expl_noise != 0:
-        action = (action + np.random.normal(
-            0,
-            expl_noise,
-            size=action.shape)
-            ).clip(low, high)
+        action = (action + np.random.normal(0, expl_noise, size=action.shape)).clip(
+            low, high
+        )
     return action
 
 
-def save_training_state(directory, filename, best_reward, total_timesteps, evaluations, train_rewards, episode_num, moving_avgs):
+def save_training_state(
+    directory,
+    filename,
+    best_reward,
+    total_timesteps,
+    evaluations,
+    train_rewards,
+    episode_num,
+    moving_avgs,
+):
     save_dict = {
-            'best_reward': best_reward,
-            'total_timesteps': total_timesteps,
-            'evaluations': evaluations,
-            'train_rewards': train_rewards,
-            'episode_num': episode_num,
-            'moving_avgs': moving_avgs
-            }
+        "best_reward": best_reward,
+        "total_timesteps": total_timesteps,
+        "evaluations": evaluations,
+        "train_rewards": train_rewards,
+        "episode_num": episode_num,
+        "moving_avgs": moving_avgs,
+    }
 
     torch.save(save_dict, directory + filename)
 
+
 def load_training_state(directory, filename):
     return torch.load(directory + filename)
-    
-def moving_average(x,n_episodes):
+
+
+def moving_average(x, n_episodes):
     if len(x) < n_episodes:
         return np.mean(x)
     else:
         return np.mean(x[-n_episodes:])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # DDPG Args
-    parser.add_argument("--seed", default=0, type=int)  # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument("--start_timesteps", default=1e4, type=int)  # How many time steps purely random policy is run for
-    parser.add_argument("--eval_freq", default=5e3, type=float)  # How often (time steps) we evaluate
-    parser.add_argument("--max_timesteps", default=1e6, type=float)  # Max time steps to run environment for
-    parser.add_argument("--save_models", action="store_true", default=True)  # Whether or not models are saved
-    parser.add_argument("--expl_noise", default=0.1, type=float)  # Std of Gaussian exploration noise
-    parser.add_argument("--batch_size", default=32, type=int)  # Batch size for both actor and critic
+    parser.add_argument(
+        "--seed", default=0, type=int
+    )  # Sets Gym, PyTorch and Numpy seeds
+    parser.add_argument(
+        "--start_timesteps", default=1e4, type=int
+    )  # How many time steps purely random policy is run for
+    parser.add_argument(
+        "--eval_freq", default=5e3, type=float
+    )  # How often (time steps) we evaluate
+    parser.add_argument(
+        "--max_timesteps", default=1e6, type=float
+    )  # Max time steps to run environment for
+    parser.add_argument(
+        "--save_models", action="store_true", default=True
+    )  # Whether or not models are saved
+    parser.add_argument(
+        "--expl_noise", default=0.1, type=float
+    )  # Std of Gaussian exploration noise
+    parser.add_argument(
+        "--batch_size", default=32, type=int
+    )  # Batch size for both actor and critic
     parser.add_argument("--discount", default=0.99, type=float)  # Discount factor
-    parser.add_argument("--tau", default=0.005, type=float)  # Target network update rate
-    parser.add_argument("--policy_noise", default=0.2, type=float)  # Noise added to target policy during critic update
-    parser.add_argument("--noise_clip", default=0.5, type=float)  # Range to clip target policy noise
-    parser.add_argument("--policy_freq", default=2, type=int)  # Frequency of delayed policy updates
-    parser.add_argument("--env_timesteps", default=500, type=int)  # Frequency of delayed policy updates
-    parser.add_argument("--replay_buffer_max_size", default=10000, type=int)  # Maximum number of steps to keep in the replay buffer
-    parser.add_argument('--model-dir', type=str, default='reinforcement/pytorch/models/')
-    parser.add_argument('--load_initial_policy', help='Start the training on a loaded polisy', action = 'store_true')
-    parser.add_argument('--policy', type=str, default='ddpg', help='Name of the initial policy')
-    parser.add_argument('--per', help='Train with Prioritized Experience Replay', action = 'store_true')
-    parser.add_argument('--gradclip', help='Gradient clipping', action = 'store_true')
+    parser.add_argument(
+        "--tau", default=0.005, type=float
+    )  # Target network update rate
+    parser.add_argument(
+        "--policy_noise", default=0.2, type=float
+    )  # Noise added to target policy during critic update
+    parser.add_argument(
+        "--noise_clip", default=0.5, type=float
+    )  # Range to clip target policy noise
+    parser.add_argument(
+        "--policy_freq", default=2, type=int
+    )  # Frequency of delayed policy updates
+    parser.add_argument(
+        "--env_timesteps", default=500, type=int
+    )  # Frequency of delayed policy updates
+    parser.add_argument(
+        "--replay_buffer_max_size", default=10000, type=int
+    )  # Maximum number of steps to keep in the replay buffer
+    parser.add_argument(
+        "--model-dir", type=str, default="reinforcement/pytorch/models/"
+    )
+    parser.add_argument(
+        "--load_initial_policy",
+        help="Start the training on a loaded polisy",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--policy", type=str, default="ddpg", help="Name of the initial policy"
+    )
+    parser.add_argument(
+        "--per", help="Train with Prioritized Experience Replay", action="store_true"
+    )
+    parser.add_argument("--gradclip", help="Gradient clipping", action="store_true")
 
     _train(parser.parse_args())

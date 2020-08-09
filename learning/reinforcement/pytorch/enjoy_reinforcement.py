@@ -11,11 +11,18 @@ import torch
 from reinforcement.pytorch.ddpg import DDPG
 from reinforcement.pytorch.td3 import TD3
 from utils.env import launch_env
-from utils.wrappers import NormalizeWrapper, GrayscaleWrapper, ImgWrapper, \
-    DtRewardWrapper, ActionWrapper, ResizeWrapper
+from utils.wrappers import (
+    NormalizeWrapper,
+    GrayscaleWrapper,
+    ImgWrapper,
+    DtRewardWrapper,
+    ActionWrapper,
+    ResizeWrapper,
+)
 from gym.wrappers import FrameStack
 
-policies = {'ddpg': DDPG, 'td3': TD3}
+policies = {"ddpg": DDPG, "td3": TD3}
+
 
 def _enjoy(args):
     # Launch the env with our helper function
@@ -40,8 +47,7 @@ def _enjoy(args):
     # policy.load(filename=args.policy, directory='reinforcement/pytorch/models/')
 
     policy = policies[args.policy](state_dim, action_dim, max_action)
-    policy.load('reinforcement/pytorch/models/', args.policy)
-
+    policy.load("reinforcement/pytorch/models/", args.policy)
 
     obs = env.reset()
     done = False
@@ -55,7 +61,8 @@ def _enjoy(args):
         done = False
         obs = env.reset()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--policy', default='ddpg', help='Name of the initial policy')
+    parser.add_argument("--policy", default="ddpg", help="Name of the initial policy")
     _enjoy(parser.parse_args())
